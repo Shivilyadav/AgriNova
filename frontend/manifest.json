@@ -1,0 +1,17 @@
+{
+  "name": "AgriNova | AI-Driven Crop Recommendation",
+  "short_name": "AgriNova",
+  "description": "AgriNova: Empowering farmers with AI-driven crop recommendations.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#84cc16",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

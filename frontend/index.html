@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriNova | AI-Driven Crop Recommendation</title>
+
+  <!-- SEO Strategy -->
+  <meta name="description" content="AgriNova: Empowering farmers with AI-driven crop recommendations.">
+  <meta name="keywords" content="Agriculture, AI, Crop Prediction, AgriNova">
+  <meta name="author" content="Shivil Yadav & Team">
+
+  <!-- PWA & Mobile Optimization -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#84cc16">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icon-512.png">
+  <link rel="icon" type="image/png" href="assets/logo.png">
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
+      });
+    }
+  </script>
+</head>
+
+<body>
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- Navbar matches agrinova.tech -->
+  <header>
+    <div class="logo">
+      <img src="icon-512.png" alt="AgriNova Logo" style="height: 32px; width: 32px; border-radius: 6px;"> AgriNova
+    </div>
+    <nav>
+      <ul>
+        <li><a href="#home">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#pipeline">AI Dashboard</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <!-- Language Toggle inside Header -->
+      <select id="lang-select" onchange="switchLang(this.value)">
+        <option value="en">EN</option>
+        <option value="hi">HI</option>
+        <option value="mr">MR</option>
+      </select>
+      <a href="#pipeline" class="btn btn-sm">Get Started</a>
+    </div>
+  </header>
+
+  <!-- Hero Section matches agrinova.tech -->
+  <section class="hero" id="home">
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+      <h1 id="hero-title">Revolutionize Your Farming with AgriNova</h1>
+      <p id="hero-desc">Empowering farmers with AI-driven insights for optimal crop yield, real-time weather updates,
+        and sustainable agricultural practices.</p>
+      <div class="hero-buttons">
+        <a href="#pipeline" class="btn">Get Started</a>
+        <a href="#about" class="btn btn-outline">See How It Works</a>
+      </div>
+
+      <!-- Mobile Scan QR Code -->
+      <div class="qr-code-container" 
+           onclick="window.open('assets/qrcode.png', '_blank')"
+           title="Click to expand QR Code"
+           style="margin-top: 40px; display: inline-flex; align-items: center; background: rgba(0,0,0,0.5); padding: 12px 20px; border-radius: 12px; border: 1px solid var(--accent-green);">
+        <div class="qr-pulse-ring"></div>
+        <img src="assets/qrcode.png" alt="Scan to open on mobile"
+          style="width: 80px; height: 80px; border-radius: 8px; margin-right: 15px; position: relative; z-index: 1;">
+        <div style="text-align: left; position: relative; z-index: 1;">
+          <h4 style="color: #fff; margin: 0 0 5px 0; font-size: 1rem;">Scan for Live Demo</h4>
+          <p style="color: #94a3b8; font-size: 0.8rem; margin: 0;">Open AgriNova instantly on your phone.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Services / Features Section -->
+  <section class="features" id="services">
+    <div class="container">
+      <div class="section-title">
+        <h2 id="services-title">Cutting-Edge Technologies</h2>
+        <p id="services-desc">Leverage our suite of advanced tools designed to maximize your agricultural output.</p>
+      </div>
+
+      <div class="tech-container">
+        <!-- Card 1: Real-Time Monitoring -->
+        <div class="tech-card tech-card-1">
+          <div class="overlay">
+            <div class="tech-icon"><i class="fa-solid fa-microchip"></i></div>
+            <h3>Real-Time Monitoring</h3>
+            <p>IOT sensors aur Satellite telemetry se mitti ki health track karein.</p>
+            <a href="#" class="explore-btn">Explore Feature <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+        </div>
+
+        <!-- Card 2: Predictive Intelligence -->
+        <div class="tech-card tech-card-2">
+          <div class="overlay">
+            <div class="tech-icon"><i class="fa-solid fa-brain"></i></div>
+            <h3>Predictive Intelligence</h3>
+            <p>AI models se future crop yield aur keedo ka hamla forecast karein.</p>
+            <a href="#" class="explore-btn">Explore Feature <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+        </div>
+
+        <!-- Card 3: Resource Optimization -->
+        <div class="tech-card tech-card-3">
+          <div class="overlay">
+            <div class="tech-icon"><i class="fa-solid fa-droplet"></i></div>
+            <h3>Resource Optimization</h3>
+            <p>Precision farming se pani aur sanyog ki 30% tak bachat karein.</p>
+            <a href="#" class="explore-btn">Explore Feature <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+        </div>
+
+        <!-- Card 4: Climate Adaptation -->
+        <div class="tech-card tech-card-4">
+          <div class="overlay">
+            <div class="tech-icon"><i class="fa-solid fa-wind"></i></div>
+            <h3>Climate Adaptation</h3>
+            <p>Global warming ke hisab se resilient farming techniques apnayein.</p>
+            <a href="#" class="explore-btn">Explore Feature <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- How It Works Section (Logical Flow) -->
+    <section class="how-it-works" id="about">
+      <div class="container">
+        <div class="section-header-centered">
+          <h2>How It Works</h2>
+          <p>The Journey from Soil to Satellite-Powered Recommendation</p>
+        </div>
+
+        <div class="workflow-container">
+          <!-- Visual Illustration -->
+          <div class="workflow-visual">
+            <div class="visual-card">
+              <img src="how-it-works.png" alt="Soil to Cloud Pipeline" class="workflow-img">
+              <div class="ping-animation"></div>
+            </div>
+          </div>
+
+          <!-- Step List -->
+          <div class="workflow-steps">
+            <div class="step">
+              <div class="step-num">01</div>
+              <div class="step-info">
+                <h3>Data Collection</h3>
+                <p>User soil parameters (N, P, K, pH) enter karta hai using IoT or Lab reports.</p>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-num">02</div>
+              <div class="step-info">
+                <h3>Environment Sync</h3>
+                <h3 style="display:none">Environment Sync</h3> <!-- Keep title for modal logic search if needed -->
+                <p>System real-time weather aur satellite data (Temp, Humidity) fetch karta hai via Open-Meteo.</p>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-num">03</div>
+              <div class="step-info">
+                <h3>AI Analysis</h3>
+                <p>Hamara trained Machine Learning model (Random Forest) data ko analyze karta hai.</p>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-num">04</div>
+              <div class="step-info">
+                <h3>Recommendation</h3>
+                <p>Aapko sabse behtar crop aur uski confidence percentage milti hai instantly.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- THE INTERACTIVE DASHBOARD -->
+    <section class="dashboard-section" id="pipeline">
+      <div class="container">
+        <div class="section-title">
+          <h2>Live AI Dashboard</h2>
+          <p>Test the AgriNova ML Pipeline right now.</p>
+        </div>
+
+        <div class="dashboard">
+            <!-- Quick Demo Autofill -->
+            <div class="demo-scenarios" style="margin-bottom: 25px; display: flex; gap: 10px; flex-wrap: wrap;">
+              <span style="font-size: 0.8rem; color: var(--text-secondary); width: 100%; margin-bottom: 5px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">
+                <i class="fa-solid fa-flask"></i> Quick Demo Scenarios:
+              </span>
+              <button class="btn btn-sm btn-outline" style="padding: 6px 12px; font-size: 0.75rem;" onclick="autofill('banana')">Banana (High Moisture)</button>
+              <button class="btn btn-sm btn-outline" style="padding: 6px 12px; font-size: 0.75rem;" onclick="autofill('chickpea')">Chickpea (Dry Soil)</button>
+            </div>
+
+            <h3 class="card-title"><i class="fa-solid fa-bolt"></i> Soil Analysis Input</h3>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Nitrogen (N) <span style="font-size: 0.8em; color: var(--text-secondary);">(mg/kg)</span></label>
+                <input type="number" id="n_val" value="85">
+              </div>
+              <div class="form-group">
+                <label>Phosphorous (P) <span
+                    style="font-size: 0.8em; color: var(--text-secondary);">(mg/kg)</span></label>
+                <input type="number" id="p_val" value="50">
+              </div>
+              <div class="form-group">
+                <label>Potassium (K) <span
+                    style="font-size: 0.8em; color: var(--text-secondary);">(mg/kg)</span></label>
+                <input type="number" id="k_val" value="40">
+              </div>
+              <div class="form-group">
+                <label>pH Balance <span style="font-size: 0.8em; color: var(--text-secondary);">(0-14)</span></label>
+                <input type="number" id="ph_val" step="0.1" value="6.5">
+              </div>
+            </div>
+
+            <!-- Environment Simulation (Manual Override) -->
+            <div class="simulation-section">
+              <h4
+                style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 15px; text-transform: uppercase;">
+                <i class="fa-solid fa-sliders"></i> Environment Simulation
+              </h4>
+              <div class="grid-3">
+                <div class="form-group">
+                  <label>Temp (°C) <span style="font-size: 0.8em; color: var(--text-secondary);">(Live
+                      auto)</span></label>
+                  <input type="number" id="temp_sim" placeholder="28">
+                </div>
+                <div class="form-group">
+                  <label>Humidity (%) <span style="font-size: 0.8em; color: var(--text-secondary);">(Live
+                      auto)</span></label>
+                  <input type="number" id="hum_sim" placeholder="70">
+                </div>
+                <div class="form-group">
+                  <label>Rainfall (mm) <span style="font-size: 0.8em; color: var(--text-secondary);">(Live
+                      auto)</span></label>
+                  <input type="number" id="rain_sim" placeholder="50">
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-full" onclick="recommendCrop()" id="recommend-btn">Execute AI Prediction</button>
+
+            <!-- New Prediction Result Card -->
+            <div class="prediction-result-card" id="result-box">
+              <div class="result-header">
+                <span class="badge-mini"><i class="fa-solid fa-check-circle"></i> AI Analysis Complete</span>
+                <p>RECOMMENDED CROP</p>
+                <h1 class="crop-name" id="crop-result">Rice</h1>
+              </div>
+
+              <div class="main-confidence">
+                <div class="confidence-text">
+                  <span>Model Confidence</span>
+                  <span class="percentage" id="current-confidence">94%</span>
+                </div>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill" id="confidence-bar" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <p class="result-desc" id="crop-desc">
+                AgriNova AI has identified Rice as the optimal biomass for your current
+                soil chemistry and environmental moisture levels.
+              </p>
+
+              <!-- Agent 2: Market Intelligence Output -->
+              <div class="market-analysis-card" id="market-card">
+                  <div class="market-badge"><i class="fa-solid fa-chart-line"></i> Agent 2: Market Intelligence</div>
+                  <div class="mandi-grid">
+                      <div class="mandi-item">
+                          <span class="mandi-label">Mandi Bhav</span>
+                          <span class="mandi-value" id="market-price">--</span>
+                      </div>
+                      <div class="mandi-item">
+                          <span class="mandi-label">Price Trend</span>
+                          <span class="mandi-value" id="market-trend">--</span>
+                      </div>
+                      <div class="mandi-item">
+                          <span class="mandi-label">ROI Potential</span>
+                          <span class="mandi-value" id="profit-index">--</span>
+                      </div>
+                  </div>
+              </div>
+
+              <!-- AI Master Strategist: Reasoning Trace (Chain of Thought) -->
+              <div class="reasoning-trace-card" id="reasoning-card">
+                  <div class="reasoning-header">
+                      <i class="fa-solid fa-brain"></i> AI Master Strategist: Chain of Thought
+                  </div>
+                  <div class="master-plan">
+                      <p id="master-plan-text">Orchestrating scientific, financial, and policy data...</p>
+                  </div>
+                  <div class="cot-steps" id="cot-steps-list">
+                      <!-- Chain of Thought Steps populate here -->
+                  </div>
+              </div>
+
+              <button class="btn btn-outline" onclick="speakResult()" id="voice-btn"
+                style="margin-top: 15px; width: 100%; font-size: 0.9rem; margin-bottom: 20px;">
+                <i class="fa-solid fa-volume-high"></i> Voice Assistant (Listen)
+              </button>
+
+              <!-- Detailed Probability Breakdown -->
+              <div class="confidence-section">
+                <h5><i class="fa-solid fa-chart-bar"></i> Full Probability Breakdown</h5>
+                <div id="prob-container" class="prob-container">
+                  <!-- Other class probabilities -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Weather Sidebar -->
+          <div class="card weather-card">
+            <h3 class="card-title"><i class="fa-solid fa-satellite"></i> Live Satellite Feed</h3>
+            <div class="temp-large" id="temp-val">--°C</div>
+            <p id="weather-desc" class="condition">Synchronizing...</p>
+
+            <div class="weather-stats">
+              <div>
+                <span>Humidity</span>
+                <strong id="hum-val">--%</strong>
+              </div>
+              <div>
+                <span>Rainfall</span>
+                <strong id="rain-val">--mm</strong>
+              </div>
+            </div>
+            <div class="status-alert" id="alert-val">Connecting...</div>
+
+            <!-- Tips Embedded in Sidebar -->
+            <div class="tips-mini">
+              <h4 style="margin: 20px 0 10px; color:#fff"><i class="fa-solid fa-lightbulb" style="color:#84cc16;"></i>
+                Smart Tip</h4>
+              <div id="tips-container">Loading tips...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <div class="container footer-content">
+        <div class="footer-brand">
+          <div class="logo"><img src="icon-512.png" alt="AgriNova Logo"
+              style="height: 32px; width: 32px; border-radius: 6px;"> AgriNova</div>
+          <p>Empowering farmers worldwide with data-driven <br> precision agriculture and AI technology.</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 AgriNova | Project by Shivil Yadav</p>
+      </div>
+    </footer>
+
+    <!-- Feature Detail Modal -->
+    <div id="featureModal" class="modal">
+      <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <h2 id="modalTitle">Feature Detail</h2>
+        <div class="modal-body">
+          <p id="modalDescription">Loading details...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agent 3: AI Farming Expert (Floating Chat) -->
+    <div id="chat-widget" class="chat-widget">
+        <div class="chat-header">
+            <div class="agent-avatar"><i class="fa-solid fa-robot"></i></div>
+            <div class="agent-info">
+                <h3>Agent 3</h3>
+                <p>AI Farming Expert</p>
+            </div>
+            <button class="chat-close" onclick="toggleChat()">&times;</button>
+        </div>
+        <div id="chat-messages" class="chat-messages">
+            <div class="message ai-message">Namaste! Main AgriNova ka AI Expert hoon. Aap mujhse kheti se juda koi bhi sawal puch sakte hain.</div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="user-msg" placeholder="Ask about crop health, market..." onkeypress="handleChatKey(event)">
+            <button onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+    <button id="chat-trigger" class="chat-trigger" onclick="toggleChat()">
+        <i class="fa-solid fa-message"></i>
+        <span class="pulse-ring"></span>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

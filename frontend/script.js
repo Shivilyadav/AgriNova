@@ -1,0 +1,767 @@
+// AgriNova Pro Frontend Logic - Mission Critical Farming Intelligence
+const API_BASE_URL = "https://43d23e5030916c6e-152-59-100-237.serveousercontent.com";
+
+let currentWeatherData = { temp: 25, humidity: 80, rain: 0 };
+let userCoords = { lat: null, lon: null };
+
+// High-Precision Geo-Location Initialization
+function initGeoLocation() {
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                userCoords.lat = position.coords.latitude;
+                userCoords.lon = position.coords.longitude;
+                console.log(`[GPS] Localized to: ${userCoords.lat}, ${userCoords.lon}`);
+                fetchWeather(); // Refresh with real location
+            },
+            (error) => {
+                console.warn("[GPS] Access denied, using default Mumbai nexus.");
+                fetchWeather(); // Fallback
+            }
+        );
+    } else {
+        fetchWeather();
+    }
+}
+
+// Quick Demo Autofill Logic for Demo Judges
+function autofill(cropType) {
+    const scenarios = {
+        'banana': { n: 100, p: 80, k: 200, ph: 6.0, temp: 28, hum: 85, rain: 150 },
+        'chickpea': { n: 40, p: 65, k: 80, ph: 6.8, temp: 22, hum: 20, rain: 70 }
+    };
+
+    const data = scenarios[cropType];
+    if (!data) return;
+
+    // Set Soil Values
+    document.getElementById('n_val').value = data.n;
+    document.getElementById('p_val').value = data.p;
+    document.getElementById('k_val').value = data.k;
+    document.getElementById('ph_val').value = data.ph;
+
+    // Set Simulation Overrides
+    document.getElementById('temp_sim').value = data.temp;
+    document.getElementById('hum_sim').value = data.hum;
+    document.getElementById('rain_sim').value = data.rain;
+
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        title: `Demo Scenario: ${cropType.charAt(0).toUpperCase() + cropType.slice(1)}`,
+        text: 'Inputs optimized for High Confidence prediction.',
+        icon: 'info',
+        timer: 3000,
+        showConfirmButton: false,
+        background: '#161b22',
+        color: '#fff',
+        iconColor: '#84cc16'
+    });
+}
+
+async function recommendCrop() {
+    const n = document.getElementById('n_val').value;
+    const p = document.getElementById('p_val').value;
+    const k = document.getElementById('k_val').value;
+    const ph = document.getElementById('ph_val').value;
+    const btn = document.getElementById('recommend-btn');
+    const resultBox = document.getElementById('result-box');
+
+    // UI Feedback: Start Pipeline
+    btn.innerHTML = '<i class="fa-solid fa-sync fa-spin"></i> Initializing Pipeline...';
+    btn.disabled = true;
+    resultBox.classList.remove('active');
+    
+    // Simulations
+    const tempSim = document.getElementById('temp_sim').value;
+    const humSim = document.getElementById('hum_sim').value;
+    const rainSim = document.getElementById('rain_sim').value;
+
+    const bodyData = {
+        N: parseFloat(n),
+        P: parseFloat(p),
+        K: parseFloat(k),
+        ph: parseFloat(ph),
+        q: "Mumbai",
+        lat: userCoords.lat,
+        lon: userCoords.lon
+    };
+
+    if (tempSim) bodyData.temp_sim = parseFloat(tempSim);
+    if (humSim) bodyData.hum_sim = parseFloat(humSim);
+    if (rainSim) bodyData.rain_sim = parseFloat(rainSim);
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/predict`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bodyData)
+        });
+
+        if (!response.ok) throw new Error("Inference engine offline");
+
+        const data = await response.json();
+        
+        // Update UI with AI results
+        const cropResultEl = document.getElementById('crop-result');
+        cropResultEl.innerText = data.crop;
+        
+        const cropDescEl = document.getElementById('crop-desc');
+        cropDescEl.innerText = `AgriNova AI has identified ${data.crop} as the optimal biomass for your current soil chemistry and environmental moisture levels.`;
+        
+        // Expert Model Visual Feedback
+        const badgeEl = document.querySelector('.badge-mini');
+        if (data.source.includes("Expert")) {
+            badgeEl.innerHTML = `<i class="fa-solid fa-star"></i> Expert System Verified`;
+            badgeEl.style.background = "rgba(191, 255, 0, 0.2)";
+            badgeEl.style.color = "var(--neon-green)";
+            cropResultEl.style.color = "var(--neon-green)";
+        } else {
+            badgeEl.innerHTML = `<i class="fa-solid fa-check-circle"></i> AI Analysis Complete`;
+            badgeEl.style.background = "rgba(132, 204, 22, 0.1)";
+            badgeEl.style.color = "var(--accent-green)";
+            cropResultEl.style.color = "var(--accent-green)";
+        }
+
+        // Update Main Confidence Meter
+
+        const probEntries = Object.entries(data.probabilities);
+        const [winningCrop, winningProb] = probEntries[0];
+        document.getElementById('current-confidence').innerText = winningProb;
+        
+        // Animation
+        setTimeout(() => {
+            document.getElementById('confidence-bar').style.width = winningProb;
+        }, 100);
+
+        // Render Remaining Confidence Breakdown
+        const probContainer = document.getElementById('prob-container');
+        probContainer.innerHTML = '';
+        
+        probEntries.slice(1).forEach(([crop, prob]) => {
+            const item = document.createElement('div');
+            item.className = 'prob-item';
+            item.innerHTML = `
+                <div class="prob-label">
+                    <span>${crop}</span>
+                    <span>${prob}</span>
+                </div>
+                <div class="prob-bar-bg">
+                    <div class="prob-bar-fill" style="width: 0%"></div>
+                </div>
+            `;
+            probContainer.appendChild(item);
+            
+            // Trigger individual bar animations
+            setTimeout(() => {
+                item.querySelector('.prob-bar-fill').style.width = prob;
+            }, 300);
+        });
+
+        // Update Market Intelligence (Agent 2)
+        if (data.market_intelligence) {
+            const mi = data.market_intelligence;
+            document.getElementById('market-price').innerText = `₹ ${mi.current_price_inr} / qtl`;
+            document.getElementById('market-trend').innerText = mi.trend;
+            document.getElementById('profit-index').innerText = mi.profit_index;
+            
+            // Set dynamic colors for trend
+            const trendEl = document.getElementById('market-trend');
+            trendEl.style.color = mi.trend.includes("Bullish") ? "var(--neon-green)" : "#3b82f6";
+        }
+
+        if (data.market_pick) {
+            const pick = data.market_pick;
+            const lang = document.getElementById('lang-select').value;
+            const t = translations[lang];
+            
+            // Add a recommendation text
+            const marketCard = document.getElementById('market-card');
+            let recEl = document.getElementById('market-rec-text');
+            if (!recEl) {
+                recEl = document.createElement('p');
+                recEl.id = 'market-rec-text';
+                recEl.style.marginTop = '15px';
+                recEl.style.fontSize = '0.85rem';
+                recEl.style.borderTop = '1px solid rgba(255,255,255,0.05)';
+                recEl.style.paddingTop = '10px';
+                marketCard.appendChild(recEl);
+            }
+            
+            recEl.innerHTML = `<i class="fa-solid fa-star" style="color: gold"></i> <strong>${t['mi-pick']}:</strong> ${pick.crop} ${t['mi-at']} ₹ ${pick.price}`;
+            
+            // If the market pick is different from the primary result, highlight it
+            if (pick.crop.toLowerCase() !== data.crop.toLowerCase()) {
+                recEl.style.background = 'rgba(255, 215, 0, 0.1)';
+                recEl.style.padding = '10px';
+                recEl.style.borderRadius = '8px';
+                recEl.style.border = '1px dashed gold';
+            }
+        }
+
+        // Update Chain of Thought (CoT) Orchestration
+        if (data.coT_analysis) {
+            const cot = data.coT_analysis;
+            document.getElementById('master-plan-text').innerText = cot.master_strategy;
+            
+            const stepsList = document.getElementById('cot-steps-list');
+            stepsList.innerHTML = ''; // Clear old steps
+            cot.chain_of_thought.forEach((step, index) => {
+                const stepEl = document.createElement('div');
+                stepEl.className = 'cot-step';
+                stepEl.innerHTML = `<i class="fa-solid fa-chevron-right"></i> ${step}`;
+                stepsList.appendChild(stepEl);
+            });
+        }
+
+        resultBox.classList.add('active');
+        resultBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Beautiful Success Toast Notification from SweetAlert2
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'Prediction Successful!',
+            text: `Best crop: ${data.crop}`,
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            background: '#161b22',
+            color: '#fff',
+            iconColor: '#84cc16'
+        });
+
+    } catch (error) {
+        console.error("Pipeline failure:", error);
+        btn.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Sync Error';
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Pipeline Error',
+            text: 'Could not reach the AI Inference Engine. Please ensure the backend is running.',
+            background: '#161b22',
+            color: '#fff',
+            confirmButtonColor: '#84cc16'
+        });
+
+        setTimeout(() => {
+            btn.innerHTML = 'Execute AI Prediction';
+            btn.disabled = false;
+        }, 3000);
+    } finally {
+        btn.innerHTML = 'Execute AI Prediction';
+        btn.disabled = false;
+    }
+}
+
+// --- FEATURE MODAL LOGIC ---
+const featureDetails = {
+    "Real-Time Monitoring": "Hamara system IoT sensors aur satellite telemetry ka ek powerful combination use karta hai. Ye mitti ki Volumetric Water Content (VWC) aur Electrical Conductivity ko monitor karta hai. Isse kisan ko ye pata chalta hai ki mitti mein nutrients kitne active hain. Research ke mutabik, real-time data use karne se fertilizer ka kharcha 20% tak kam ho jata hai.",
+    "Predictive Intelligence": "Ye feature sirf mitti nahi, balki Historical Weather Patterns aur Atmospheric Pressure ko bhi analyze karta hai. Hum 'Ensemble Learning' (Random Forest + Gradient Boosting) use karte hain jo ye batata hai ki agle 15 dino mein pest (keede) lagne ka kitna risk hai. Isse kisan 'Reactive' hone ki jagah 'Proactive' bante hain.",
+    "Resource Optimization": "Iska main maqsad hai 'More Crop Per Drop'. Hum Evapotranspiration (ET) rates calculate karte hain—yani ki mitti aur poudhon se kitna pani uda (evaporate hua). Is data se system automatic irrigation cycles suggest karta hai, jo water wastage ko 30-40% tak reduce kar deta hai.",
+    "Climate Adaptation": "Global warming ki wajah se mausam unpredictable ho gaya hai. Ye tool Climate Models (like CMIP6) ka data lekar ye analyze karta hai ki kya aapki chuni hui crop aane wale extreme heat ya unseasonal rain ko jhel payegi? Agar risk zyada hai, toh ye alternative 'Short-duration' crops ya 'Cover crops' suggest karta hai."
+};
+
+function initModal() {
+    const modal = document.getElementById('featureModal');
+    const closeBtn = document.querySelector('.close-btn');
+
+    document.querySelectorAll('.explore-btn').forEach(btn => {
+        btn.onclick = function(e) {
+            e.preventDefault();
+            const title = this.parentElement.querySelector('h3').innerText;
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalDescription').innerText = featureDetails[title] || "Details loading...";
+            modal.style.display = "block";
+            document.body.style.overflow = "hidden"; // Prevent scroll
+        };
+    });
+
+    closeBtn.onclick = () => {
+        modal.style.display = "none";
+        document.body.style.overflow = "auto";
+    };
+
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            modal.style.display = "none";
+            document.body.style.overflow = "auto";
+        }
+    };
+}
+
+function autofill(type) {
+    if (type === 'banana') {
+        document.getElementById('n_val').value = 100;
+        document.getElementById('p_val').value = 80;
+        document.getElementById('k_val').value = 200;
+        document.getElementById('ph_val').value = 6.0;
+        document.getElementById('temp_sim').value = 28;
+        document.getElementById('hum_sim').value = 85;
+        document.getElementById('rain_sim').value = 180;
+    } else if (type === 'chickpea') {
+        document.getElementById('n_val').value = 40;
+        document.getElementById('p_val').value = 65;
+        document.getElementById('k_val').value = 80;
+        document.getElementById('ph_val').value = 7.0;
+        document.getElementById('temp_sim').value = 22;
+        document.getElementById('hum_sim').value = 20;
+        document.getElementById('rain_sim').value = 50;
+    }
+    
+    // Trigger the prediction immediately for a smooth demo!
+    recommendCrop();
+}
+
+// Global Environment Synchronization
+async function fetchWeather() {
+    try {
+        let url = `${API_BASE_URL}/weather?q=Mumbai`;
+        if (userCoords.lat && userCoords.lon) {
+            url += `&lat=${userCoords.lat}&lon=${userCoords.lon}`;
+        }
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Satellite sync error");
+        const data = await response.json();
+        
+        document.getElementById('temp-val').innerText = `${Math.round(data.temperature)}°C`;
+        document.getElementById('weather-desc').innerText = data.description;
+        document.getElementById('hum-val').innerText = `${data.humidity}%`;
+        document.getElementById('rain-val').innerText = `${data.rainfall}mm`;
+        document.getElementById('alert-val').innerText = `${data.location} | GPS Satellite Sync`;
+
+    } catch (error) {
+        document.getElementById('alert-val').innerText = "Running in Local Cache Mode";
+    }
+}
+
+async function fetchTips() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/tips`);
+        if (!response.ok) throw new Error("Ecosystem link error");
+        const data = await response.json();
+        
+        const tipsContainer = document.getElementById('tips-container');
+        tipsContainer.innerHTML = data.map((tip, i) => `
+            <div class="tip-item" style="margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+                <h3 style="font-size: 1rem; color: #fff; margin-bottom: 5px;">${tip.title}</h3>
+                <p style="font-size: 0.85rem; color: #94a3b8;">${tip.description}</p>
+            </div>
+        `).join('');
+    } catch (e) {}
+}
+
+// High-Fidelity Localization
+// High-Fidelity Localization System
+const translations = {
+    'en': {
+        'nav-home': 'Home', 'nav-about': 'About', 'nav-services': 'Services', 'nav-dashboard': 'AI Dashboard',
+        'hero-title': 'Revolutionize Your Farming with AgriNova',
+        'hero-desc': 'Empowering farmers with AI-driven insights for optimal crop yield, real-time weather updates, and sustainable agricultural practices.',
+        'services-title': 'Cutting-Edge Technologies',
+        'services-desc': 'Leverage our suite of advanced tools designed to maximize your agricultural output.',
+        'dash-title': 'Live AI Dashboard',
+        'dash-subtitle': 'Test the AgriNova ML Pipeline right now.',
+        'form-title': 'Soil Analysis Input',
+        'env-sim': 'Environment Simulation',
+        'btn-predict': 'Execute AI Prediction',
+        'result-header': 'AI Analysis Complete',
+        'rec-crop': 'RECOMMENDED CROP',
+        'confidence': 'Model Confidence',
+        'prob-title': 'Full Probability Breakdown',
+        'weather-title': 'Live Satellite Feed',
+        'tip-title': 'Smart Tip',
+        'voice-btn': 'Voice Assistant (Listen)',
+        'scan-demo': 'Scan for Live Demo',
+        'scan-desc': 'Open AgriNova instantly on your phone.',
+        'mi-title': 'Agent 2: Market Intelligence',
+        'mi-price': 'Mandi Bhav',
+        'mi-trend': 'Price Trend',
+        'mi-roi': 'ROI Potential',
+        'mi-pick': 'Profit Recommendation',
+        'mi-at': 'at',
+        'cot-title': 'AI Master Strategist: Chain of Thought',
+        'cot-loading': 'Orchestrating scientific, financial, and policy data...'
+    },
+    'hi': {
+        'nav-home': 'होम', 'nav-about': 'के बारे में', 'nav-services': 'सेवाएं', 'nav-dashboard': 'एआई डैशबोर्ड',
+        'hero-title': 'एग्रीनोवा के साथ अपनी खेती में क्रांति लाएं',
+        'hero-desc': 'इष्टतम फसल उपज, वास्तविक समय के मौसम और टिकाऊ कृषि पद्धतियों के लिए एआई-संचालित अंतर्दृष्टि के साथ किसानों को सशक्त बनाना।',
+        'services-title': 'अत्याधुनिक प्रौद्योगिकियां',
+        'services-desc': 'कृषि उत्पादन को अधिकतम करने के लिए डिज़ाइन किए गए हमारे उन्नत टूल का लाभ उठाएं।',
+        'dash-title': 'लाइव एआई डैशबोर्ड',
+        'dash-subtitle': 'अभी एग्रीनोवा मशीन लर्निंग पाइपलाइन का परीक्षण करें।',
+        'form-title': 'मिट्टी विश्लेषण इनपुट',
+        'env-sim': 'पर्यावरण सिमुलेशन',
+        'btn-predict': 'एआई भविष्यवाणी चलाएं',
+        'result-header': 'एआई विश्लेषण पूरा हुआ',
+        'rec-crop': 'अनुशंसित फसल',
+        'confidence': 'मॉडल का विश्वास',
+        'prob-title': 'पूर्ण संभावना ब्रेकडाउन',
+        'weather-title': 'लाइव सैटेलाइट फीड',
+        'tip-title': 'स्मार्ट टिप',
+        'voice-btn': 'आवाज सहायक (सुनें)',
+        'scan-demo': 'लाइव डेमो के लिए स्कैन करें',
+        'scan-desc': 'अपने फोन पर तुरंत एग्रीनोवा खोलें।',
+        'mi-title': 'एजेंट 2: मार्केट इंटेलिजेंस',
+        'mi-price': 'मंडी भाव',
+        'mi-trend': 'मूल्य रुझान',
+        'mi-roi': 'लाभ की संभावना',
+        'mi-pick': 'सबसे अधिक मुनाफे वाली फसल',
+        'mi-at': 'पर',
+        'cot-title': 'एआई मास्टर स्ट्रैटेजिस्ट: विचारधारा की श्रृंखला',
+        'cot-loading': 'वैज्ञानिक, वित्तीय और नीतिगत डेटा का समन्वय...'
+    },
+    'mr': {
+        'nav-home': 'होम', 'nav-about': 'बद्दल', 'nav-services': 'सेवा', 'nav-dashboard': 'AI डॅशबोर्ड',
+        'hero-title': 'अ‍ॅग्रीनोवासह तुमच्या शेतीत क्रांती घडवा',
+        'hero-desc': 'पीक उत्पादन, हवामान आणि शाश्वत कृषी पद्धतींसाठी एआय-आधारित अंतर्दृष्टीसह शेतकऱ्यांना सक्षम करणे.',
+        'services-title': 'अत्याधुनिक तंत्रज्ञान',
+        'services-desc': 'तुमचे कृषी उत्पादन वाढवण्यासाठी डिझाइन केलेल्या आमच्या प्रगत साधनांचा लाभ घ्या.',
+        'dash-title': 'लाइव एआई डॅशबोर्ड',
+        'dash-subtitle': 'ॲग्रीनोवा मशीन लर्निंग पाइपलाइनची आत्ताच चाचणी करा.',
+        'form-title': 'माती विश्लेषण इनपुट',
+        'env-sim': 'पर्यावरण सिम्युलेशन',
+        'btn-predict': 'AI अंदाज कार्यान्वित करा',
+        'result-header': 'AI विश्लेषण पूर्ण झाले',
+        'rec-crop': 'शिफारस केलेले पीक',
+        'confidence': 'मॉडेलचा विश्वास',
+        'prob-title': 'पूर्ण संभाव्यता ब्रेकडाउन',
+        'weather-title': 'थेट उपग्रह फीड',
+        'tip-title': 'स्मार्ट टिप',
+        'voice-btn': 'व्हॉइस असिस्टंट (ऐका)',
+        'scan-demo': 'थेट डेमोसाठी स्कॅन करा',
+        'scan-desc': 'तुमच्या फोनवर लगेच ॲग्रीनोवा उघडा.',
+        'mi-title': 'एजंट 2: मार्केट इंटेलिजेंस',
+        'mi-price': 'मंडी भाव',
+        'mi-trend': 'किंमत कल',
+        'mi-roi': 'नफ्याची क्षमता',
+        'mi-pick': 'सर्वाधिक फायदेशीर पीक',
+        'mi-at': 'वर',
+        'cot-title': 'AI मास्टर स्ट्रॅटेजिस्ट: विचारांची शृंखला',
+        'cot-loading': 'वैज्ञानिक, आर्थिक आणि धोरणात्मक डेटाचे समन्वय...'
+    }
+};
+
+function switchLang(lang) {
+    const t = translations[lang];
+    
+    // Header & Hero
+    document.getElementById('hero-title').innerText = t['hero-title'];
+    document.getElementById('hero-desc').innerText = t['hero-desc'];
+    
+    // Navigation
+    const navLinks = document.querySelectorAll('nav ul li a');
+    navLinks[0].innerText = t['nav-home'];
+    navLinks[1].innerText = t['nav-about'];
+    navLinks[2].innerText = t['nav-services'];
+    navLinks[3].innerText = t['nav-dashboard'];
+
+    // Services
+    document.getElementById('services-title').innerText = t['services-title'];
+    document.getElementById('services-desc').innerText = t['services-desc'];
+
+    // Dashboard
+    document.querySelector('.dashboard-section h2').innerText = t['dash-title'];
+    document.querySelector('.dashboard-section p').innerText = t['dash-subtitle'];
+    document.querySelector('.form-card .card-title').innerHTML = `<i class="fa-solid fa-bolt"></i> ${t['form-title']}`;
+    document.querySelector('.simulation-section h4').innerHTML = `<i class="fa-solid fa-sliders"></i> ${t['env-sim']}`;
+    document.getElementById('recommend-btn').innerText = t['btn-predict'];
+
+    // Weather Sidebar
+    document.querySelector('.weather-card .card-title').innerHTML = `<i class="fa-solid fa-satellite"></i> ${t['weather-title']}`;
+    document.querySelector('.tips-mini h4').innerHTML = `<i class="fa-solid fa-lightbulb" style="color:#84cc16;"></i> ${t['tip-title']}`;
+
+    // Results Box
+    document.querySelector('.badge-mini').innerHTML = `<i class="fa-solid fa-check-circle"></i> ${t['result-header']}`;
+    document.querySelector('.result-header p').innerText = t['rec-crop'];
+    document.querySelector('.confidence-text span:first-child').innerText = t['confidence'];
+    document.querySelector('.confidence-section h5').innerHTML = `<i class="fa-solid fa-chart-bar"></i> ${t['prob-title']}`;
+    document.getElementById('voice-btn').innerHTML = `<i class="fa-solid fa-volume-high"></i> ${t['voice-btn']}`;
+    
+    // Market Intelligence (Agent 2)
+    const miBadge = document.querySelector('.market-badge');
+    if (miBadge) miBadge.innerHTML = `<i class="fa-solid fa-chart-line"></i> ${t['mi-title']}`;
+    
+    const miLabels = document.querySelectorAll('.mandi-label');
+    if (miLabels.length >= 3) {
+        miLabels[0].innerText = t['mi-price'];
+        miLabels[1].innerText = t['mi-trend'];
+        miLabels[2].innerText = t['mi-roi'];
+    }
+
+    // CoT Orchestration
+    const cotTitle = document.querySelector('.reasoning-header');
+    if (cotTitle) cotTitle.innerHTML = `<i class="fa-solid fa-brain"></i> ${t['cot-title']}`;
+    
+    const cotLoading = document.getElementById('master-plan-text');
+    if (cotLoading && cotLoading.innerText.includes('Orchestrating')) {
+        cotLoading.innerText = t['cot-loading'];
+    }
+
+    // QR Code
+    document.querySelector('.qr-code-container h4').innerText = t['scan-demo'];
+    document.querySelector('.qr-code-container p').innerText = t['scan-desc'];
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    initGeoLocation();
+    fetchTips();
+    initModal();
+    initBackgroundAnim(); // New feature: Cyber-Space Network
+    setInterval(fetchWeather, 300000); // Sync every 5 mins
+
+    // Header Morph Effect
+    const header = document.querySelector('header');
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+            header.classList.add('scrolled');
+        } else {
+            header.classList.remove('scrolled');
+        }
+    });
+
+    // Reveal animations on scroll
+    const reveal = () => {
+        const sections = document.querySelectorAll('section');
+        sections.forEach(s => {
+            const top = s.getBoundingClientRect().top;
+            if (top < window.innerHeight - 150) {
+                s.style.opacity = '1';
+                s.style.transform = 'translateY(0)';
+            }
+        });
+    };
+    
+    // Set initial reveal states
+    document.querySelectorAll('section').forEach(s => {
+        s.style.opacity = '0';
+        s.style.transform = 'translateY(30px)';
+        s.style.transition = 'all 0.8s cubic-bezier(0.23, 1, 0.32, 1)';
+    });
+    
+    window.addEventListener('scroll', reveal);
+    reveal();
+});
+
+// --- NEW FEATURE: BACKGROUND ANIMATION (Cyber-Space Network) ---
+function initBackgroundAnim() {
+    const canvas = document.getElementById('bg-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let width, height, particles = [];
+    const particleCount = 60;
+    const colors = ['#84cc16', '#3b82f6', '#10b981', '#6366f1'];
+
+    class Particle {
+        constructor() {
+            this.init();
+        }
+
+        init() {
+            this.x = Math.random() * width;
+            this.y = Math.random() * height;
+            this.vx = (Math.random() - 0.5) * 0.4;
+            this.vy = (Math.random() - 0.5) * 0.4;
+            this.size = Math.random() * 2 + 1;
+            this.color = colors[Math.floor(Math.random() * colors.length)];
+            this.orbit = Math.random() * 300 + 50;
+            this.angle = Math.random() * Math.PI * 2;
+            this.speed = (Math.random() * 0.001) + 0.0005;
+        }
+
+        update() {
+            // Orbital motion relative to center
+            this.angle += this.speed;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            // Combination of linear and orbital for a complex network look
+            this.x += this.vx;
+            this.y += this.vy;
+
+            if (this.x < 0 || this.x > width) this.vx *= -1;
+            if (this.y < 0 || this.y > height) this.vy *= -1;
+        }
+
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = this.color;
+            ctx.fill();
+        }
+    }
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+
+    function createParticles() {
+        particles = [];
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
+        }
+    }
+
+    function drawOrbits() {
+        const cx = width / 2;
+        const cy = height / 2;
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.08)';
+        ctx.lineWidth = 1;
+        
+        [150, 300, 450, 600].forEach(radius => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, width, height);
+        
+        ctx.shadowBlur = 0;
+        drawOrbits();
+
+        particles.forEach(p => {
+            p.update();
+            p.draw();
+            
+            // Draw connections
+            particles.forEach(p2 => {
+                const dx = p.x - p2.x;
+                const dy = p.y - p2.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 120) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.strokeStyle = `rgba(132, 204, 22, ${0.1 * (1 - dist/120)})`;
+                    ctx.lineWidth = 0.5;
+                    ctx.stroke();
+                }
+            });
+        });
+
+        requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    createParticles();
+    animate();
+}
+
+// Voice Assistant (TTS) Logic
+function speakResult() {
+    const cropName = document.getElementById('crop-result') ? document.getElementById('crop-result').innerText : '';
+    if (!cropName || cropName === '--') {
+        alert("Pehle AI Prediction run karein.");
+        return;
+    }
+
+    const langSelect = document.getElementById('lang-select');
+    const currentLang = langSelect ? langSelect.value : 'en';
+
+    let textToSpeak = `AgriNova AI has identified ${cropName} as the optimal crop for your current soil and environmental conditions.`;
+    let speechLang = "en-IN";
+
+    if (currentLang === 'hi') {
+        textToSpeak = `एग्रीनोवा एआई के अनुसार, आपकी मिट्टी और मौसम के लिए ${cropName} की खेती सबसे अच्छी रहेगी।`;
+        speechLang = "hi-IN";
+    } else if (currentLang === 'mr') {
+        textToSpeak = `ॲग्रीनोवा एआय नुसार, सध्याच्या हवामान आणि मातीसाठी आपण ${cropName} ची लागवड करावी.`;
+        speechLang = "mr-IN"; 
+    }
+
+    try {
+        window.speechSynthesis.cancel(); // Stop playing
+
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = speechLang;
+        utterance.rate = 1.0; 
+        
+        const btn = document.getElementById('voice-btn');
+        let originalText = "";
+        if (btn) {
+            originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-volume-high fa-beat"></i> Speaking...';
+            
+            utterance.onend = () => { btn.innerHTML = originalText; };
+            utterance.onerror = (e) => { 
+                btn.innerHTML = originalText; 
+                console.error("Speech Error:", e);
+            };
+        }
+
+        window.speechSynthesis.speak(utterance);
+    } catch (err) {
+        console.error("TTS System Error:", err);
+        alert("Aapka browser Voice Output ko support nahi kar raha hai.");
+    }
+}
+
+// --- NEW FEATURE: AGENT 3 (AI FARMING EXPERT) CHAT ---
+function toggleChat() {
+    const chat = document.getElementById('chat-widget');
+    chat.classList.toggle('active');
+    if(chat.classList.contains('active')) {
+        document.getElementById('user-msg').focus();
+    }
+}
+
+function handleChatKey(e) {
+    if (e.key === 'Enter') sendChatMessage();
+}
+
+async function sendChatMessage() {
+    const input = document.getElementById('user-msg');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    // Add user message to UI
+    appendChatMsg(msg, 'user-message');
+    input.value = '';
+
+    // Typing indication
+    const messagesContainer = document.getElementById('chat-messages');
+    const typingMsg = document.createElement('div');
+    typingMsg.id = 'typing-indicator';
+    typingMsg.className = 'message ai-message';
+    typingMsg.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Agent 3 is thinking...';
+    messagesContainer.appendChild(typingMsg);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    try {
+        const cropRes = document.getElementById('crop-result').innerText;
+        const response = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg, crop_context: cropRes })
+        });
+        
+        const data = await response.json();
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) messagesContainer.removeChild(indicator);
+        appendChatMsg(data.response, 'ai-message');
+    } catch (e) {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) messagesContainer.removeChild(indicator);
+        appendChatMsg("Maaf kijiye, main connect nahi kar paa raha hoon. API key check karein.", 'ai-message');
+    }
+}
+
+function appendChatMsg(text, className) {
+    const messagesContainer = document.getElementById('chat-messages');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `message ${className}`;
+    msgDiv.innerText = text;
+    messagesContainer.appendChild(msgDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
