@@ -465,8 +465,8 @@ def farming_expert_chat(data: ChatRequest):
     except Exception as e:
         return {"response": f"I had a synchronization error: {str(e)}", "error": True}
 
-# Serve the beautiful frontend dashboard directly
-frontend_dir = Path(__file__).resolve().parents[2] / "frontend"
+# Serve the beautiful frontend dashboard directly from the root
+frontend_dir = Path(__file__).resolve().parents[2] 
 app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
 
 if __name__ == "__main__":
