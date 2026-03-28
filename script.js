@@ -587,6 +587,78 @@ document.addEventListener('DOMContentLoaded', () => {
     reveal();
 });
 
+// --- SIDEBAR INTERACTION LOGIC ---
+function activateNav(element, section) {
+    // 1. Manage Active State Class
+    document.querySelectorAll('#sidebar-menu .nav-item').forEach(el => el.classList.remove('active'));
+    if (element) element.classList.add('active');
+
+    // 2. Perform Action Based on Section View
+    switch(section) {
+        case 'dashboard':
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            break;
+        case 'crops':
+            autofill('banana');
+            Swal.fire({
+                icon: 'info',
+                title: 'Crop Preset Loaded',
+                text: 'Preset conditions for "Banana" loaded. Click "Run AI Analysis" to evaluate viability!',
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 4000
+            });
+            break;
+        case 'soil':
+            const soilEl = document.getElementById('n_val');
+            if (soilEl) {
+                soilEl.focus();
+                const card = soilEl.closest('.soil-card');
+                if(card) {
+                    card.style.transition = 'all 0.3s';
+                    card.style.border = '2px solid var(--accent-green)';
+                    card.style.boxShadow = '0 0 20px rgba(132, 204, 22, 0.3)';
+                    setTimeout(() => { card.style.border = ''; card.style.boxShadow = ''; }, 1500);
+                }
+            }
+            break;
+        case 'weather':
+            const locInput = document.getElementById('location_input');
+            if (locInput) {
+                locInput.focus();
+                const wCard = locInput.closest('.weather-controls');
+                if(wCard) {
+                    wCard.style.transition = 'all 0.3s';
+                    wCard.style.background = 'rgba(132, 204, 22, 0.1)';
+                    setTimeout(() => wCard.style.background = '', 1500);
+                }
+            }
+            break;
+        case 'market':
+            const probContainer = document.getElementById('prob-container');
+            if (probContainer && probContainer.innerHTML.trim() !== '') {
+                const marketCard = document.querySelector('.market-card');
+                marketCard.scrollIntoView({behavior: 'smooth', block: 'center'});
+                marketCard.style.transition = 'all 0.3s';
+                marketCard.style.border = '2px solid var(--accent-green)';
+                setTimeout(() => marketCard.style.border = '', 1500);
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Market Data',
+                    text: 'Please Run AI Analysis first to unlock predictive market trends for your soil.',
+                    confirmButtonColor: '#84cc16'
+                });
+            }
+            break;
+        case 'alerts':
+            Swal.fire({
+                icon: 'success',
+                title: 'All Systems Nominal',
+                text: 'No critical alerts for your farm today. Weather parameters are within safe thresholds.',
+                confirmButtonColor: '#84cc16'
+            });
+            break;
+    }
+}
 // --- NEW FEATURE: BACKGROUND ANIMATION (Cyber-Space Network) ---
 function initBackgroundAnim() {
     const canvas = document.getElementById('bg-canvas');
@@ -759,6 +831,8 @@ function handleChatKey(e) {
     if (e.key === 'Enter') sendChatMessage();
 }
 
+let chatHistory = [];
+
 async function sendChatMessage() {
     const input = document.getElementById('user-msg');
     const msg = input.value.trim();
@@ -778,17 +852,26 @@ async function sendChatMessage() {
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
     try {
-        const cropRes = document.getElementById('crop-result').innerText;
-        const response = await fetch('/chat', {
+        const cropResEl = document.getElementById('crop-result');
+        const cropRes = cropResEl ? cropResEl.innerText : "";
+        const response = await fetch(`${API_BASE_URL}/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: msg, crop_context: cropRes })
+            body: JSON.stringify({ message: msg, crop_context: cropRes, history: chatHistory })
         });
         
         const data = await response.json();
         const indicator = document.getElementById('typing-indicator');
         if (indicator) messagesContainer.removeChild(indicator);
-        appendChatMsg(data.response, 'ai-message');
+        appendChatMsg(data.response, 'ai-message', true);
+        
+        // Add to history so AI remembers the conversation flow
+        chatHistory.push({ role: "user", content: msg });
+        chatHistory.push({ role: "assistant", content: data.response });
+        
+        // Keep history manageable
+        if (chatHistory.length > 10) chatHistory = chatHistory.slice(chatHistory.length - 10);
+        
     } catch (e) {
         const indicator = document.getElementById('typing-indicator');
         if (indicator) messagesContainer.removeChild(indicator);
@@ -796,12 +879,86 @@ async function sendChatMessage() {
     }
 }
 
-function appendChatMsg(text, className) {
+function appendChatMsg(text, className, isStreaming = false) {
     const messagesContainer = document.getElementById('chat-messages');
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${className}`;
-    msgDiv.innerText = text;
+    
+    // Add text container for markdown injection
+    const textSpan = document.createElement('div');
+    textSpan.className = 'msg-content';
+    msgDiv.appendChild(textSpan);
+    
+    // Auto-attach TTS Voice Button just for AI Agent Messages
+    if (className === 'ai-message') {
+        const btn = document.createElement('button');
+        btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+        btn.className = 'chat-voice-btn';
+        btn.title = 'Speak Message Aloud';
+        btn.onclick = () => speakChatMsg(text, btn);
+        msgDiv.appendChild(btn);
+    }
+    
     messagesContainer.appendChild(msgDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // ChatGPT Style Streaming and Markdown Effect
+    if (isStreaming && className === 'ai-message') {
+        let idx = 0;
+        
+        function typeWriter() {
+            if(idx < text.length) {
+                // Type chunks of 2-5 characters for smooth real-time feel
+                const chunkSize = Math.floor(Math.random() * 4) + 2;
+                idx += chunkSize;
+                if(idx > text.length) idx = text.length;
+                
+                const currentText = text.substring(0, idx);
+                // Parse markdown live while typing
+                textSpan.innerHTML = marked.parse(currentText) + '<span class="cursor">▋</span>';
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                setTimeout(typeWriter, 12);
+            } else {
+                textSpan.innerHTML = marked.parse(text); // Final markdown render
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+        typeWriter();
+    } else {
+        if (className === 'ai-message') {
+            textSpan.innerHTML = marked.parse(text);
+        } else {
+            textSpan.innerText = text;
+        }
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+}
+
+function speakChatMsg(text, btnElement) {
+    try {
+        window.speechSynthesis.cancel();
+        let speechLang = "en-IN"; 
+        
+        // Auto detect basic Hinglish/Hindi
+        const lowerText = text.toLowerCase();
+        if(lowerText.includes("kaise") || lowerText.includes("namaste") || lowerText.includes("kheti") || lowerText.includes("maaf") || lowerText.includes("hoon")) {
+            speechLang = "hi-IN";
+        }
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = speechLang;
+        utterance.rate = 1.0;
+        
+        const originalHTML = '<i class="fa-solid fa-volume-high"></i>';
+        const speakingHTML = '<i class="fa-solid fa-volume-high fa-beat"></i>';
+        
+        btnElement.innerHTML = speakingHTML;
+        
+        utterance.onend = () => { btnElement.innerHTML = originalHTML; };
+        utterance.onerror = () => { btnElement.innerHTML = originalHTML; };
+        
+        window.speechSynthesis.speak(utterance);
+    } catch(err) {
+        console.error("Chat TTS Error:", err);
+    }
 }
 

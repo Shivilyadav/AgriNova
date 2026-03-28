@@ -22,6 +22,9 @@
   <link rel="stylesheet" href="style.css?v=2">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Markdown Parsing for ChatGPT-like formatting -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
@@ -203,13 +206,13 @@
             <i class="fa-solid fa-leaf sidebar-logo"></i>
             <span>AgriNova Pro</span>
           </div>
-          <nav class="sidebar-nav">
-            <a href="#pipeline" class="active"><i class="fa-solid fa-house"></i> Dashboard</a>
-            <a href="#pipeline" onclick="autofill('banana')"><i class="fa-solid fa-seedling"></i> Crops</a>
-            <a href="#pipeline" onclick="document.getElementById('n_val').focus()"><i class="fa-solid fa-flask"></i> Soil Analytics</a>
-            <a href="#pipeline"><i class="fa-solid fa-cloud-sun"></i> Weather</a>
-            <a href="#pipeline"><i class="fa-solid fa-chart-line"></i> Market Trends</a>
-            <a href="#pipeline"><i class="fa-solid fa-bell"></i> Alerts</a>
+          <nav class="sidebar-nav" id="sidebar-menu">
+            <a href="#pipeline" class="nav-item active" onclick="activateNav(this, 'dashboard')"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="#pipeline" class="nav-item" onclick="activateNav(this, 'crops')"><i class="fa-solid fa-seedling"></i> Crops</a>
+            <a href="#pipeline" class="nav-item" onclick="activateNav(this, 'soil')"><i class="fa-solid fa-flask"></i> Soil Analytics</a>
+            <a href="#pipeline" class="nav-item" onclick="activateNav(this, 'weather')"><i class="fa-solid fa-cloud-sun"></i> Weather</a>
+            <a href="#pipeline" class="nav-item" onclick="activateNav(this, 'market')"><i class="fa-solid fa-chart-line"></i> Market Trends</a>
+            <a href="#pipeline" class="nav-item" onclick="activateNav(this, 'alerts')"><i class="fa-solid fa-bell"></i> Alerts</a>
           </nav>
           <div class="sidebar-user">
             <img src="icon-512.png" alt="User">
@@ -275,9 +278,6 @@
                   <input type="number" id="rain_sim" placeholder="Rain">
                 </div>
               </div>
-              <button class="btn btn-full btn-glow" onclick="recommendCrop()" id="pipeline-run-btn">
-                <i class="fa-solid fa-bolt"></i> Run AI Analysis
-              </button>
             </div>
 
             <!-- Weather Card -->
@@ -374,6 +374,9 @@
                  <p id="policy-note">ICAR Standards Verified</p>
               </div>
             </div>
+            <button class="btn btn-full btn-glow" onclick="recommendCrop()" id="pipeline-run-btn">
+              <i class="fa-solid fa-bolt"></i> Run AI Analysis
+            </button>
           </div>
         </main>
       </div>
@@ -415,7 +418,12 @@
             <button class="chat-close" onclick="toggleChat()">&times;</button>
         </div>
         <div id="chat-messages" class="chat-messages">
-            <div class="message ai-message">Namaste! Main AgriNova ka AI Expert hoon. Aap mujhse kheti se juda koi bhi sawal puch sakte hain.</div>
+            <div class="message ai-message">
+                <span>Namaste! Main AgriNova ka AI Expert hoon. Aap mujhse kheti se juda koi bhi sawal puch sakte hain.</span>
+                <button class="chat-voice-btn" title="Speak Message Aloud" onclick="speakChatMsg('Namaste! Main AgriNova ka AI Expert hoon. Aap mujhse kheti se juda koi bhi sawal puch sakte hain.', this)">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
         </div>
         <div class="chat-input-area">
             <input type="text" id="user-msg" placeholder="Ask about crop health, market..." onkeypress="handleChatKey(event)">

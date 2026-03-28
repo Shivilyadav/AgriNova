@@ -238,9 +238,14 @@ market_worker = MarketAnalystWorker()
 compliance_worker = ComplianceAnalystWorker()
 agrinova_manager = AgriNovaManager()
 
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
 class ChatRequest(BaseModel):
     message: str
     crop_context: Optional[str] = None
+    history: Optional[list[ChatMessage]] = []
 
 class SoilData(BaseModel):
     N: float
@@ -471,15 +476,19 @@ def farming_expert_chat(data: ChatRequest):
             "Help farmers with crop health, pest control, soil nutrition, and market profit strategies. "
             "Keep your answers practical, data-driven, and supportive. Use a professional yet accessible tone."
         )
-        
-        user_msg = f"User is asking about: {data.message}. Context Crop: {data.crop_context or 'General Agriculture'}"
+        user_msg = data.message
+        if data.crop_context and data.crop_context not in ["--", "", "undefined"]:
+            user_msg += f"\n[Context: The user's active crop analysis result is {data.crop_context}]"
+            
+        messages = [{"role": "system", "content": system_prompt}]
+        for msg in data.history:
+            messages.append({"role": msg.role, "content": msg.content})
+            
+        messages.append({"role": "user", "content": user_msg})
         
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_msg}
-            ],
+            messages=messages,
             max_tokens=800
         )
         return {"response": response.choices[0].message.content}

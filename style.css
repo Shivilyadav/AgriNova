@@ -776,8 +776,7 @@ select#lang-select option {
 }
 
 .dash-card.soil-card {
-  grid-row: span 2;
-  min-height: 650px;
+  height: auto;
 }
 
 .btn-full {
@@ -797,6 +796,26 @@ select#lang-select option {
   grid-template-columns: repeat(2, 1fr);
   gap: 15px;
   margin-bottom: 20px;
+}
+
+#pipeline-run-btn {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 30px auto 0;
+  max-width: 800px;
+  height: 65px;
+  font-size: 1.3rem;
+  border-radius: 20px;
+  z-index: 10;
+  box-shadow: 0 15px 45px rgba(132, 204, 22, 0.4);
+}
+
+@media (max-width: 900px) {
+  #pipeline-run-btn {
+    grid-column: span 1;
+    margin: 20px 0;
+    max-width: 100%;
+  }
 }
 
 .soil-stat {
@@ -1339,6 +1358,45 @@ footer {
   box-shadow: 0 4px 15px rgba(132, 204, 22, 0.2);
 }
 
+/* ChatGPT Markdown & Streaming Styles */
+.msg-content {
+  display: block;
+}
+.msg-content p {
+  margin: 0 0 10px 0;
+}
+.msg-content p:last-child {
+  margin-bottom: 0;
+}
+.msg-content ul, .msg-content ol {
+  margin: 0 0 10px 20px;
+  padding: 0;
+}
+.msg-content li {
+  margin-bottom: 4px;
+}
+.msg-content pre {
+  background: #0d1117;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  border: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 10px;
+}
+.msg-content code {
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.cursor {
+  display: inline-block;
+  margin-left: 3px;
+  color: var(--accent-green);
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
 .chat-input-area {
   padding: 20px;
   display: flex;
@@ -1378,6 +1436,28 @@ footer {
 .chat-input-area button:hover {
   transform: scale(1.05);
   background: var(--neon-green);
+}
+
+.chat-voice-btn {
+  background: rgba(132, 204, 22, 0.1);
+  border: 1px solid rgba(132, 204, 22, 0.2);
+  color: var(--accent-green);
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-left: 12px;
+  vertical-align: middle;
+  padding: 6px 10px;
+  border-radius: 12px;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-voice-btn:hover {
+  background: var(--accent-green);
+  color: #030508;
+  transform: scale(1.05);
 }
 
 @media (max-width: 500px) {
