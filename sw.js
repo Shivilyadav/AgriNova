@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agrinova-v4';
+const CACHE_NAME = 'agrinova-v5';
 const ASSETS = [
     '/',
     '/index.html',

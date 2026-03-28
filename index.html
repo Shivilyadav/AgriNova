@@ -19,7 +19,7 @@
   <link rel="apple-touch-icon" href="icon-512.png">
   <link rel="icon" type="image/png" href="assets/logo.png">
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
@@ -194,170 +194,188 @@
       </div>
     </section>
 
-    <!-- THE INTERACTIVE DASHBOARD -->
-    <section class="dashboard-section" id="pipeline">
-      <div class="container">
-        <div class="section-title">
-          <h2>Live AI Dashboard</h2>
-          <p>Test the AgriNova ML Pipeline right now.</p>
-        </div>
-
-        <div class="dashboard">
-            <!-- Quick Demo Autofill -->
-            <div class="demo-scenarios" style="margin-bottom: 25px; display: flex; gap: 10px; flex-wrap: wrap;">
-              <span style="font-size: 0.8rem; color: var(--text-secondary); width: 100%; margin-bottom: 5px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">
-                <i class="fa-solid fa-flask"></i> Quick Demo Scenarios:
-              </span>
-              <button class="btn btn-sm btn-outline" style="padding: 6px 12px; font-size: 0.75rem;" onclick="autofill('banana')">Banana (High Moisture)</button>
-              <button class="btn btn-sm btn-outline" style="padding: 6px 12px; font-size: 0.75rem;" onclick="autofill('chickpea')">Chickpea (Dry Soil)</button>
+    <!-- THE INTERACTIVE DASHBOARD (PRO REDESIGN) -->
+    <section class="dashboard-pro" id="pipeline">
+      <div class="dashboard-app">
+        <!-- Sidebar Navigation -->
+        <aside class="dash-sidebar">
+          <div class="sidebar-top">
+            <i class="fa-solid fa-leaf sidebar-logo"></i>
+            <span>AgriNova Pro</span>
+          </div>
+          <nav class="sidebar-nav">
+            <a href="#pipeline" class="active"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="#pipeline" onclick="autofill('banana')"><i class="fa-solid fa-seedling"></i> Crops</a>
+            <a href="#pipeline" onclick="document.getElementById('n_val').focus()"><i class="fa-solid fa-flask"></i> Soil Analytics</a>
+            <a href="#pipeline"><i class="fa-solid fa-cloud-sun"></i> Weather</a>
+            <a href="#pipeline"><i class="fa-solid fa-chart-line"></i> Market Trends</a>
+            <a href="#pipeline"><i class="fa-solid fa-bell"></i> Alerts</a>
+          </nav>
+          <div class="sidebar-user">
+            <img src="icon-512.png" alt="User">
+            <div class="user-info">
+              <h4>Farmer Shivil</h4>
+              <p>Pro Member</p>
             </div>
+          </div>
+        </aside>
 
-            <h3 class="card-title"><i class="fa-solid fa-bolt"></i> Soil Analysis Input</h3>
-
-            <div class="form-grid">
-              <div class="form-group">
-                <label>Nitrogen (N) <span style="font-size: 0.8em; color: var(--text-secondary);">(mg/kg)</span></label>
-                <input type="number" id="n_val" value="85">
-              </div>
-              <div class="form-group">
-                <label>Phosphorous (P) <span
-                    style="font-size: 0.8em; color: var(--text-secondary);">(mg/kg)</span></label>
-                <input type="number" id="p_val" value="50">
-              </div>
-              <div class="form-group">
-                <label>Potassium (K) <span
-                    style="font-size: 0.8em; color: var(--text-secondary);">(mg/kg)</span></label>
-                <input type="number" id="k_val" value="40">
-              </div>
-              <div class="form-group">
-                <label>pH Balance <span style="font-size: 0.8em; color: var(--text-secondary);">(0-14)</span></label>
-                <input type="number" id="ph_val" step="0.1" value="6.5">
-              </div>
+        <!-- Main Dashboard Content -->
+        <main class="dash-main">
+          <!-- Top Bar -->
+          <div class="dash-top-bar">
+            <div class="search-box">
+              <i class="fa-solid fa-search"></i>
+              <input type="text" placeholder="Search crops, weather, soil quality...">
             </div>
-
-            <!-- Environment Simulation (Manual Override) -->
-            <div class="simulation-section">
-              <h4
-                style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 15px; text-transform: uppercase;">
-                <i class="fa-solid fa-sliders"></i> Environment Simulation
-              </h4>
-              <div class="grid-3">
-                <div class="form-group">
-                  <label>Temp (°C) <span style="font-size: 0.8em; color: var(--text-secondary);">(Live
-                      auto)</span></label>
-                  <input type="number" id="temp_sim" placeholder="28">
-                </div>
-                <div class="form-group">
-                  <label>Humidity (%) <span style="font-size: 0.8em; color: var(--text-secondary);">(Live
-                      auto)</span></label>
-                  <input type="number" id="hum_sim" placeholder="70">
-                </div>
-                <div class="form-group">
-                  <label>Rainfall (mm) <span style="font-size: 0.8em; color: var(--text-secondary);">(Live
-                      auto)</span></label>
-                  <input type="number" id="rain_sim" placeholder="50">
-                </div>
+            <div class="top-bar-actions">
+              <div class="lang-pill">
+                <i class="fa-solid fa-globe"></i>
+                <select id="lang-select-dash" onchange="switchLang(this.value)">
+                  <option value="en">English (US)</option>
+                  <option value="hi">हिन्दी (Hindi)</option>
+                  <option value="mr">मराठी (Marathi)</option>
+                </select>
               </div>
+              <button class="mode-toggle"><i class="fa-regular fa-moon"></i></button>
             </div>
+          </div>
 
-            <button class="btn btn-full" onclick="recommendCrop()" id="recommend-btn">Execute AI Prediction</button>
-
-            <!-- New Prediction Result Card -->
-            <div class="prediction-result-card" id="result-box">
-              <div class="result-header">
-                <span class="badge-mini"><i class="fa-solid fa-check-circle"></i> AI Analysis Complete</span>
-                <p>RECOMMENDED CROP</p>
-                <h1 class="crop-name" id="crop-result">Rice</h1>
+          <!-- Dashboard Grid -->
+          <div class="dash-grid">
+            <!-- Soil Card -->
+            <div class="dash-card soil-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-flask-vial"></i> Soil Analytics</h3>
+                <span class="status-dot">Live</span>
               </div>
-
-              <div class="main-confidence">
-                <div class="confidence-text">
-                  <span>Model Confidence</span>
-                  <span class="percentage" id="current-confidence">94%</span>
+              <div class="soil-stats-grid">
+                <div class="soil-stat">
+                  <span>Nitrogen</span>
+                  <input type="number" id="n_val" value="85">
                 </div>
-                <div class="progress-bar-bg">
-                  <div class="progress-bar-fill" id="confidence-bar" style="width: 0%;"></div>
+                <div class="soil-stat">
+                  <span>Phosphorus</span>
+                  <input type="number" id="p_val" value="50">
+                </div>
+                <div class="soil-stat">
+                  <span>Potassium</span>
+                  <input type="number" id="k_val" value="40">
+                </div>
+                <div class="soil-stat">
+                  <span>pH Level</span>
+                  <input type="number" id="ph_val" step="0.1" value="6.5">
                 </div>
               </div>
-
-              <p class="result-desc" id="crop-desc">
-                AgriNova AI has identified Rice as the optimal biomass for your current
-                soil chemistry and environmental moisture levels.
-              </p>
-
-              <!-- Agent 2: Market Intelligence Output -->
-              <div class="market-analysis-card" id="market-card">
-                  <div class="market-badge"><i class="fa-solid fa-chart-line"></i> Agent 2: Market Intelligence</div>
-                  <div class="mandi-grid">
-                      <div class="mandi-item">
-                          <span class="mandi-label">Mandi Bhav</span>
-                          <span class="mandi-value" id="market-price">--</span>
-                      </div>
-                      <div class="mandi-item">
-                          <span class="mandi-label">Price Trend</span>
-                          <span class="mandi-value" id="market-trend">--</span>
-                      </div>
-                      <div class="mandi-item">
-                          <span class="mandi-label">ROI Potential</span>
-                          <span class="mandi-value" id="profit-index">--</span>
-                      </div>
-                  </div>
+              <div class="simulation-mini">
+                <label><i class="fa-solid fa-sliders"></i> Simulation Overrides</label>
+                <div class="mini-inputs">
+                  <input type="number" id="temp_sim" placeholder="Temp">
+                  <input type="number" id="hum_sim" placeholder="Humid">
+                  <input type="number" id="rain_sim" placeholder="Rain">
+                </div>
               </div>
-
-              <!-- AI Master Strategist: Reasoning Trace (Chain of Thought) -->
-              <div class="reasoning-trace-card" id="reasoning-card">
-                  <div class="reasoning-header">
-                      <i class="fa-solid fa-brain"></i> AI Master Strategist: Chain of Thought
-                  </div>
-                  <div class="master-plan">
-                      <p id="master-plan-text">Orchestrating scientific, financial, and policy data...</p>
-                  </div>
-                  <div class="cot-steps" id="cot-steps-list">
-                      <!-- Chain of Thought Steps populate here -->
-                  </div>
-              </div>
-
-              <button class="btn btn-outline" onclick="speakResult()" id="voice-btn"
-                style="margin-top: 15px; width: 100%; font-size: 0.9rem; margin-bottom: 20px;">
-                <i class="fa-solid fa-volume-high"></i> Voice Assistant (Listen)
+              <button class="btn btn-full btn-glow" onclick="recommendCrop()" id="pipeline-run-btn">
+                <i class="fa-solid fa-bolt"></i> Run AI Analysis
               </button>
+            </div>
 
-              <!-- Detailed Probability Breakdown -->
-              <div class="confidence-section">
-                <h5><i class="fa-solid fa-chart-bar"></i> Full Probability Breakdown</h5>
-                <div id="prob-container" class="prob-container">
-                  <!-- Other class probabilities -->
+            <!-- Weather Card -->
+            <div class="dash-card weather-hero-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-cloud-sun"></i> Live Weather</h3>
+                <span id="alert-val" class="weather-location">Mumbai Sync</span>
+              </div>
+              <div class="weather-main-display">
+                <div class="weather-icon-big"><i class="fa-solid fa-sun-plant-wilt"></i></div>
+                <div class="temp-big">
+                  <h1 id="temp-val">--°C</h1>
+                  <p id="weather-desc">Clear Sky</p>
+                </div>
+              </div>
+              <div class="weather-details-row">
+                <div class="w-detail">
+                  <i class="fa-solid fa-droplet"></i>
+                  <div>
+                    <span>Humidity</span>
+                    <strong id="hum-val">--%</strong>
+                  </div>
+                </div>
+                <div class="w-detail">
+                  <i class="fa-solid fa-wind"></i>
+                  <div>
+                    <span>Wind Speed</span>
+                    <strong id="wind-val">12 km/h</strong>
+                  </div>
+                </div>
+                <div class="w-detail">
+                  <i class="fa-solid fa-cloud-showers-heavy"></i>
+                  <div>
+                    <span>Rainfall</span>
+                    <strong id="rain-val">--mm</strong>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Weather Sidebar -->
-          <div class="card weather-card">
-            <h3 class="card-title"><i class="fa-solid fa-satellite"></i> Live Satellite Feed</h3>
-            <div class="temp-large" id="temp-val">--°C</div>
-            <p id="weather-desc" class="condition">Synchronizing...</p>
-
-            <div class="weather-stats">
-              <div>
-                <span>Humidity</span>
-                <strong id="hum-val">--%</strong>
+            <!-- AI Result Card (Hidden until active) -->
+            <div class="dash-card prediction-card" id="result-box">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-microchip"></i> Prediction Results</h3>
+                <span class="badge-mini badge-green" id="result-badge">AI Optimized</span>
               </div>
-              <div>
-                <span>Rainfall</span>
-                <strong id="rain-val">--mm</strong>
+              
+              <div class="prediction-main">
+                <div class="crop-visual">
+                  <i class="fa-solid fa-seedling"></i>
+                  <h1 id="crop-result">Rice</h1>
+                </div>
+                <div class="confidence-circle">
+                  <span id="current-confidence">94%</span>
+                  <p>Confidence</p>
+                </div>
+              </div>
+
+              <div class="market-quick-view">
+                <div class="quick-stat">
+                  <span>Mandi Price</span>
+                  <strong id="market-price">--</strong>
+                </div>
+                <div class="quick-stat">
+                  <span>ROI Potential</span>
+                  <strong id="profit-index" style="color:var(--accent-green)">High</strong>
+                </div>
+              </div>
+
+              <div class="cot-section">
+                <label>Chain of Thought</label>
+                <p id="master-plan-text">Analyzing soil & environmental synergy...</p>
+                <div id="cot-steps-list" class="mini-steps"></div>
+              </div>
+
+              <button class="btn btn-outline btn-sm" onclick="speakResult()" style="width:100%; margin-top:15px">
+                <i class="fa-solid fa-volume-high"></i> Listen to Expert
+              </button>
+            </div>
+
+            <!-- Price Trends / Market Analytics -->
+            <div class="dash-card market-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-chart-line"></i> Market Analytics</h3>
+                <a href="#" class="view-all">View Full Report</a>
+              </div>
+              <div class="price-bands" id="prob-container">
+                <!-- Sorted by Probabilities -->
+              </div>
+              <div class="compliance-mini" id="compliance-card">
+                 <div class="comp-header">
+                    <i class="fa-solid fa-shield-halved"></i> Govt. Compliance
+                 </div>
+                 <p id="policy-note">ICAR Standards Verified</p>
               </div>
             </div>
-            <div class="status-alert" id="alert-val">Connecting...</div>
-
-            <!-- Tips Embedded in Sidebar -->
-            <div class="tips-mini">
-              <h4 style="margin: 20px 0 10px; color:#fff"><i class="fa-solid fa-lightbulb" style="color:#84cc16;"></i>
-                Smart Tip</h4>
-              <div id="tips-container">Loading tips...</div>
-            </div>
           </div>
-        </div>
+        </main>
       </div>
     </section>
 
@@ -410,7 +428,7 @@
     </button>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=2"></script>
 </body>
 
 </html>

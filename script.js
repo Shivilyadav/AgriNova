@@ -1,5 +1,5 @@
 // AgriNova Pro Frontend Logic - Mission Critical Farming Intelligence
-const API_BASE_URL = "https://43d23e5030916c6e-152-59-100-237.serveousercontent.com";
+const API_BASE_URL = "http://127.0.0.1:8007";
 
 let currentWeatherData = { temp: 25, humidity: 80, rain: 0 };
 let userCoords = { lat: null, lon: null };
@@ -34,6 +34,8 @@ function autofill(cropType) {
     const data = scenarios[cropType];
     if (!data) return;
 
+    console.log(`[Demo] Loading Scenario: ${cropType}`);
+
     // Set Soil Values
     document.getElementById('n_val').value = data.n;
     document.getElementById('p_val').value = data.p;
@@ -48,15 +50,18 @@ function autofill(cropType) {
     Swal.fire({
         toast: true,
         position: 'top-end',
-        title: `Demo Scenario: ${cropType.charAt(0).toUpperCase() + cropType.slice(1)}`,
-        text: 'Inputs optimized for High Confidence prediction.',
+        title: `Scenario: ${cropType.toUpperCase()}`,
+        text: 'Inputs optimized for prediction.',
         icon: 'info',
-        timer: 3000,
+        timer: 2000,
         showConfirmButton: false,
         background: '#161b22',
         color: '#fff',
         iconColor: '#84cc16'
     });
+
+    // Auto-run prediction for better UX
+    setTimeout(recommendCrop, 100);
 }
 
 async function recommendCrop() {
@@ -64,7 +69,7 @@ async function recommendCrop() {
     const p = document.getElementById('p_val').value;
     const k = document.getElementById('k_val').value;
     const ph = document.getElementById('ph_val').value;
-    const btn = document.getElementById('recommend-btn');
+    const btn = document.getElementById('pipeline-run-btn');
     const resultBox = document.getElementById('result-box');
 
     // UI Feedback: Start Pipeline
@@ -103,11 +108,17 @@ async function recommendCrop() {
         const data = await response.json();
         
         // Update UI with AI results
+        const resultBox = document.getElementById('result-box');
+        if (resultBox) resultBox.classList.add('active');
+        resultBox.style.display = 'block'; // Failsafe
+        
         const cropResultEl = document.getElementById('crop-result');
-        cropResultEl.innerText = data.crop;
+        if(cropResultEl) cropResultEl.innerText = data.crop;
         
         const cropDescEl = document.getElementById('crop-desc');
-        cropDescEl.innerText = `AgriNova AI has identified ${data.crop} as the optimal biomass for your current soil chemistry and environmental moisture levels.`;
+        if (cropDescEl) {
+            cropDescEl.innerText = `AgriNova AI has identified ${data.crop} as the optimal biomass for your current soil chemistry and environmental moisture levels.`;
+        }
         
         // Expert Model Visual Feedback
         const badgeEl = document.querySelector('.badge-mini');
@@ -123,79 +134,92 @@ async function recommendCrop() {
             cropResultEl.style.color = "var(--accent-green)";
         }
 
-        // Update Main Confidence Meter
-
+        // Update Main Confidence Circle
         const probEntries = Object.entries(data.probabilities);
         const [winningCrop, winningProb] = probEntries[0];
-        document.getElementById('current-confidence').innerText = winningProb;
+        const confidenceEl = document.getElementById('current-confidence');
+        if (confidenceEl) confidenceEl.innerText = winningProb;
         
-        // Animation
-        setTimeout(() => {
-            document.getElementById('confidence-bar').style.width = winningProb;
-        }, 100);
+        // Confidence Circle Animation (Optional Glow)
+        const circle = document.querySelector('.confidence-circle');
+        if (circle) {
+            circle.style.borderColor = "var(--accent-green)";
+            circle.style.boxShadow = `0 0 30px rgba(132, 204, 22, ${parseFloat(winningProb)/100})`;
+        }
 
-        // Render Remaining Confidence Breakdown
+        // Render Remaining Confidence Breakdown (Price Trend Style)
         const probContainer = document.getElementById('prob-container');
-        probContainer.innerHTML = '';
-        
-        probEntries.slice(1).forEach(([crop, prob]) => {
-            const item = document.createElement('div');
-            item.className = 'prob-item';
-            item.innerHTML = `
-                <div class="prob-label">
-                    <span>${crop}</span>
-                    <span>${prob}</span>
-                </div>
-                <div class="prob-bar-bg">
-                    <div class="prob-bar-fill" style="width: 0%"></div>
-                </div>
-            `;
-            probContainer.appendChild(item);
-            
-            // Trigger individual bar animations
-            setTimeout(() => {
-                item.querySelector('.prob-bar-fill').style.width = prob;
-            }, 300);
-        });
+        if (probContainer) {
+            probContainer.innerHTML = '';
+            probEntries.forEach(([crop, prob]) => {
+                const item = document.createElement('div');
+                item.className = 'market-row';
+                item.style.display = 'flex';
+                item.style.justifyContent = 'space-between';
+                item.style.padding = '10px 15px';
+                item.style.background = 'rgba(13, 17, 23, 0.5)';
+                item.style.borderRadius = '10px';
+                item.style.marginBottom = '8px';
+                
+                item.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px">
+                        <i class="fa-solid fa-seedling" style="color:var(--accent-green)"></i>
+                        <span style="font-size:0.9rem">${crop}</span>
+                    </div>
+                    <div style="text-align:right">
+                        <span style="display:block; font-size:0.8rem; font-weight:700; color:var(--accent-green)">${prob}</span>
+                        <span style="font-size:0.6rem; color:var(--text-secondary)">MATCH SCORE</span>
+                    </div>
+                `;
+                probContainer.appendChild(item);
+            });
+        }
 
         // Update Market Intelligence (Agent 2)
         if (data.market_intelligence) {
             const mi = data.market_intelligence;
-            document.getElementById('market-price').innerText = `₹ ${mi.current_price_inr} / qtl`;
-            document.getElementById('market-trend').innerText = mi.trend;
-            document.getElementById('profit-index').innerText = mi.profit_index;
+            const priceEl = document.getElementById('market-price');
+            if(priceEl) priceEl.innerText = `₹ ${mi.current_price_inr} / qtl`;
             
-            // Set dynamic colors for trend
             const trendEl = document.getElementById('market-trend');
-            trendEl.style.color = mi.trend.includes("Bullish") ? "var(--neon-green)" : "#3b82f6";
+            if(trendEl) {
+                trendEl.innerText = mi.trend;
+                trendEl.style.color = mi.trend.includes("Bullish") ? "var(--neon-green)" : "#3b82f6";
+            }
+            
+            const profitEl = document.getElementById('profit-index');
+            if(profitEl) profitEl.innerText = mi.profit_index;
         }
 
         if (data.market_pick) {
             const pick = data.market_pick;
-            const lang = document.getElementById('lang-select').value;
-            const t = translations[lang];
+            const langSelect = document.getElementById('lang-select-dash') || document.getElementById('lang-select');
+            const lang = langSelect ? langSelect.value : 'en';
+            const t = translations[lang] || translations['en'];
             
             // Add a recommendation text
-            const marketCard = document.getElementById('market-card');
-            let recEl = document.getElementById('market-rec-text');
-            if (!recEl) {
-                recEl = document.createElement('p');
-                recEl.id = 'market-rec-text';
-                recEl.style.marginTop = '15px';
-                recEl.style.fontSize = '0.85rem';
-                recEl.style.borderTop = '1px solid rgba(255,255,255,0.05)';
-                recEl.style.paddingTop = '10px';
-                marketCard.appendChild(recEl);
-            }
-            
-            recEl.innerHTML = `<i class="fa-solid fa-star" style="color: gold"></i> <strong>${t['mi-pick']}:</strong> ${pick.crop} ${t['mi-at']} ₹ ${pick.price}`;
-            
-            // If the market pick is different from the primary result, highlight it
-            if (pick.crop.toLowerCase() !== data.crop.toLowerCase()) {
-                recEl.style.background = 'rgba(255, 215, 0, 0.1)';
-                recEl.style.padding = '10px';
-                recEl.style.borderRadius = '8px';
-                recEl.style.border = '1px dashed gold';
+            const marketCard = document.querySelector('.market-card') || document.getElementById('prob-container');
+            if (marketCard) {
+                let recEl = document.getElementById('market-rec-text');
+                if (!recEl) {
+                    recEl = document.createElement('p');
+                    recEl.id = 'market-rec-text';
+                    recEl.style.marginTop = '15px';
+                    recEl.style.fontSize = '0.85rem';
+                    recEl.style.borderTop = '1px solid rgba(255,255,255,0.05)';
+                    recEl.style.paddingTop = '10px';
+                    marketCard.appendChild(recEl);
+                }
+                
+                recEl.innerHTML = `<i class="fa-solid fa-star" style="color: gold"></i> <strong>${t['mi-pick']}:</strong> ${pick.crop} ${t['mi-at']} ₹ ${pick.price}`;
+                
+                // If the market pick is different from the primary result, highlight it
+                if (pick.crop.toLowerCase() !== data.crop.toLowerCase()) {
+                    recEl.style.background = 'rgba(255, 215, 0, 0.1)';
+                    recEl.style.padding = '10px';
+                    recEl.style.borderRadius = '8px';
+                    recEl.style.border = '1px dashed gold';
+                }
             }
         }
 
@@ -212,6 +236,34 @@ async function recommendCrop() {
                 stepEl.innerHTML = `<i class="fa-solid fa-chevron-right"></i> ${step}`;
                 stepsList.appendChild(stepEl);
             });
+        }
+
+        // Update Compliance Shield
+        if (data.compliance_shield) {
+            const cs = data.compliance_shield;
+            const indicator = document.getElementById('compliance-indicator');
+            const note = document.getElementById('policy-note');
+            const alertsBox = document.getElementById('compliance-alerts');
+            
+            if(indicator) {
+                indicator.innerText = cs.gov_indicator;
+                indicator.className = `compliance-status ${cs.status.toLowerCase() == 'approved' ? 'safe' : 'warning'}`;
+            }
+            if(note) {
+                note.innerText = cs.policy_note;
+            }
+            
+            if(alertsBox) {
+                alertsBox.innerHTML = '';
+                if (cs.alerts && cs.alerts.length > 0) {
+                    cs.alerts.forEach(alert => {
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'compliance-alert-item';
+                        alertDiv.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${alert}`;
+                        alertsBox.appendChild(alertDiv);
+                    });
+                }
+            }
         }
 
         resultBox.classList.add('active');
@@ -246,11 +298,11 @@ async function recommendCrop() {
         });
 
         setTimeout(() => {
-            btn.innerHTML = 'Execute AI Prediction';
+            btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Run AI Analysis';
             btn.disabled = false;
         }, 3000);
     } finally {
-        btn.innerHTML = 'Execute AI Prediction';
+        btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Run AI Analysis';
         btn.disabled = false;
     }
 }
@@ -291,28 +343,7 @@ function initModal() {
     };
 }
 
-function autofill(type) {
-    if (type === 'banana') {
-        document.getElementById('n_val').value = 100;
-        document.getElementById('p_val').value = 80;
-        document.getElementById('k_val').value = 200;
-        document.getElementById('ph_val').value = 6.0;
-        document.getElementById('temp_sim').value = 28;
-        document.getElementById('hum_sim').value = 85;
-        document.getElementById('rain_sim').value = 180;
-    } else if (type === 'chickpea') {
-        document.getElementById('n_val').value = 40;
-        document.getElementById('p_val').value = 65;
-        document.getElementById('k_val').value = 80;
-        document.getElementById('ph_val').value = 7.0;
-        document.getElementById('temp_sim').value = 22;
-        document.getElementById('hum_sim').value = 20;
-        document.getElementById('rain_sim').value = 50;
-    }
-    
-    // Trigger the prediction immediately for a smooth demo!
-    recommendCrop();
-}
+// Autofill redundant function removed (merged into lines 28-60)
 
 // Global Environment Synchronization
 async function fetchWeather() {
@@ -366,7 +397,7 @@ const translations = {
         'dash-subtitle': 'Test the AgriNova ML Pipeline right now.',
         'form-title': 'Soil Analysis Input',
         'env-sim': 'Environment Simulation',
-        'btn-predict': 'Execute AI Prediction',
+        'btn-predict': 'Run AI Analysis',
         'result-header': 'AI Analysis Complete',
         'rec-crop': 'RECOMMENDED CROP',
         'confidence': 'Model Confidence',
@@ -395,7 +426,7 @@ const translations = {
         'dash-subtitle': 'अभी एग्रीनोवा मशीन लर्निंग पाइपलाइन का परीक्षण करें।',
         'form-title': 'मिट्टी विश्लेषण इनपुट',
         'env-sim': 'पर्यावरण सिमुलेशन',
-        'btn-predict': 'एआई भविष्यवाणी चलाएं',
+        'btn-predict': 'Run AI Analysis',
         'result-header': 'एआई विश्लेषण पूरा हुआ',
         'rec-crop': 'अनुशंसित फसल',
         'confidence': 'मॉडल का विश्वास',
@@ -424,7 +455,7 @@ const translations = {
         'dash-subtitle': 'ॲग्रीनोवा मशीन लर्निंग पाइपलाइनची आत्ताच चाचणी करा.',
         'form-title': 'माती विश्लेषण इनपुट',
         'env-sim': 'पर्यावरण सिम्युलेशन',
-        'btn-predict': 'AI अंदाज कार्यान्वित करा',
+        'btn-predict': 'Run AI Analysis',
         'result-header': 'AI विश्लेषण पूर्ण झाले',
         'rec-crop': 'शिफारस केलेले पीक',
         'confidence': 'मॉडेलचा विश्वास',
@@ -463,23 +494,32 @@ function switchLang(lang) {
     document.getElementById('services-title').innerText = t['services-title'];
     document.getElementById('services-desc').innerText = t['services-desc'];
 
-    // Dashboard
-    document.querySelector('.dashboard-section h2').innerText = t['dash-title'];
-    document.querySelector('.dashboard-section p').innerText = t['dash-subtitle'];
-    document.querySelector('.form-card .card-title').innerHTML = `<i class="fa-solid fa-bolt"></i> ${t['form-title']}`;
-    document.querySelector('.simulation-section h4').innerHTML = `<i class="fa-solid fa-sliders"></i> ${t['env-sim']}`;
-    document.getElementById('recommend-btn').innerText = t['btn-predict'];
+    // Dashboard (Pro logic)
+    const dashProSection = document.querySelector('.dashboard-pro');
+    if (dashProSection) {
+        const titleEl = dashProSection.querySelector('.sidebar-top span');
+        if (titleEl) titleEl.innerText = "AgriNova Pro";
+    }
+    
+    const soilTitle = document.querySelector('.soil-card .card-header h3');
+    if (soilTitle) soilTitle.innerHTML = `<i class="fa-solid fa-flask-vial"></i> ${t['form-title']}`;
+    
+    const weatherTitle = document.querySelector('.weather-hero-card .card-header h3');
+    if (weatherTitle) weatherTitle.innerHTML = `<i class="fa-solid fa-cloud-sun"></i> ${t['weather-title']}`;
+    
+    const predictBtn = document.getElementById('pipeline-run-btn');
+    if (predictBtn) predictBtn.innerHTML = `<i class="fa-solid fa-bolt"></i> ${t['btn-predict']}`;
 
     // Weather Sidebar
     document.querySelector('.weather-card .card-title').innerHTML = `<i class="fa-solid fa-satellite"></i> ${t['weather-title']}`;
     document.querySelector('.tips-mini h4').innerHTML = `<i class="fa-solid fa-lightbulb" style="color:#84cc16;"></i> ${t['tip-title']}`;
 
-    // Results Box
-    document.querySelector('.badge-mini').innerHTML = `<i class="fa-solid fa-check-circle"></i> ${t['result-header']}`;
-    document.querySelector('.result-header p').innerText = t['rec-crop'];
-    document.querySelector('.confidence-text span:first-child').innerText = t['confidence'];
-    document.querySelector('.confidence-section h5').innerHTML = `<i class="fa-solid fa-chart-bar"></i> ${t['prob-title']}`;
-    document.getElementById('voice-btn').innerHTML = `<i class="fa-solid fa-volume-high"></i> ${t['voice-btn']}`;
+    // Results Card
+    const resHeader = document.querySelector('.prediction-card .card-header h3');
+    if (resHeader) resHeader.innerHTML = `<i class="fa-solid fa-microchip"></i> ${t['result-header']}`;
+    
+    const voiceBtn = document.querySelector('.prediction-card .btn-outline');
+    if (voiceBtn) voiceBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> ${t['voice-btn']}`;
     
     // Market Intelligence (Agent 2)
     const miBadge = document.querySelector('.market-badge');
@@ -511,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initGeoLocation();
     fetchTips();
     initModal();
-    initBackgroundAnim(); // New feature: Cyber-Space Network
+    // initBackgroundAnim(); // Disabling dynamic background for static consistency
     setInterval(fetchWeather, 300000); // Sync every 5 mins
 
     // Header Morph Effect
@@ -665,7 +705,7 @@ function speakResult() {
         return;
     }
 
-    const langSelect = document.getElementById('lang-select');
+    const langSelect = document.getElementById('lang-select-dash') || document.getElementById('lang-select');
     const currentLang = langSelect ? langSelect.value : 'en';
 
     let textToSpeak = `AgriNova AI has identified ${cropName} as the optimal crop for your current soil and environmental conditions.`;
