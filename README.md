@@ -1,54 +1,106 @@
-# AgriNova – AI-Powered Agriculture Advisory System
+# 🌱 AgriNova – Smart AI + IoT Farming Assistant
 
-AgriNova is a cutting-edge advisor for precision agriculture, developed for **Hacktoon 1.0**. It leverages AI to provide crop recommendations, real-time weather alerts, and smart farming tips to help rural farmers optimize their yields.
+## 🚨 Problem Statement
+Farmers in India often face challenges such as:
+- ❌ Incorrect crop selection
+- ❌ Lack of real-time market price awareness
+- ❌ Poor soil monitoring
+- ❌ Dependence on traditional guesswork
 
-## 🚀 Getting Started
+This leads to **low productivity, reduced profit, and high risk of crop failure**.
 
-### 1. Backend (FastAPI)
-The backend handles the AI logic and weather data integration.
+---
 
-- **Navigate to backend:** `cd backend`
-- **Install dependencies:** `pip install -r requirements.txt`
-- **Configure weather API:** create `backend/.env` and add `WEATHER_API_KEY=your_weatherapi_key_here`
-- **Run the server:** `python app/main.py`
-- **API Documentation:** Once running, visit `http://localhost:8005/docs`.
+## 💡 Proposed Solution
+**AgriNova** is an AI-powered smart farming system that integrates:
+- 📡 IoT sensors (real-time soil & environmental data)
+- 🌦️ Weather APIs
+- 📊 Market price APIs
+- 🤖 AI-based decision-making
 
-### 2. Frontend (Dashboard)
-A premium, responsive dashboard for interacting with the AI.
+👉 It helps farmers **choose the most profitable crop** based on real-time conditions.
 
-- **Open the dashboard:** Simply open `frontend/index.html` in any modern web browser.
-- **Recommended Live Server:** For the best experience (and to avoid CORS issues if connecting to the real backend), use a local server:
-  - Run `python -m http.server 3000` in the `frontend` directory and visit `http://localhost:3000`.
+---
 
-## ✨ Key Features
-- **AI Crop Recommendation:** Optimized for various soil types (N, P, K, pH) and rainfall.
-- **Real-time Weather:** Contextual weather alerts for sowing and harvesting.
-- **Smart Farming Tips:** Integrated guidance on irrigation and pest control.
-- **Multi-language Support:** English, Hindi, and Marathi toggles for better accessibility.
-- **Premium UI:** Glassmorphism design with earthy, nature-inspired palettes.
+## 🎯 Key Features
+- 🌱 Smart Crop Recommendation
+- 📊 Real-time Soil Monitoring
+- 🌦️ Weather-based Suggestions
+- 💰 Profit Optimization using Market Data
+- 📡 IoT Integration (ESP32 + Sensors)
+- 🌐 Web Dashboard for Visualization
+
+---
+
+## 🧠 Agent-Based System (Core Innovation)
+
+AgriNova uses multiple intelligent agents:
+
+### 🟢 Soil Intelligence Agent
+- Analyzes soil moisture & quality
+- Determines soil suitability
+
+### 🔵 Weather Intelligence Agent
+- Uses weather API
+- Predicts environmental conditions
+
+### 🟡 Market Intelligence Agent
+- Fetches mandi prices using APIs
+- Suggests most profitable crops
+
+👉 Final output = Combined decision from all agents
+
+---
 
 ## 🛠️ Tech Stack
 - **Backend:** Python, FastAPI, Pydantic.
 - **Frontend:** HTML5, Vanilla CSS3, JavaScript (ES6+), FontAwesome.
 - **Data:** CSV-based crop reference library.
 
-Developed exclusively by **Shivil Yadav**.
+### 🔹 Hardware
+- ESP32 / NodeMCU
+- Soil Moisture Sensor
+- DHT11 (Temperature & Humidity)
+
+### 🔹 Software
+- Frontend: HTML, CSS, JavaScript
+- Backend: Python / Node.js
+- APIs:
+  - Weather API
+  - Agmarknet (Mandi Prices)
+
+### 🔹 Deployment
+- GitHub
+- Netlify
 
 ---
 
-## 🏗️ Project Architecture & Innovation
-AgriNova integrates multiple layers of technology to ensure a seamless experience for farmers:
-1.  **AI Engine:** A Random Forest Classifier trained on diverse agricultural datasets, augmented with a **Heuristic Expert System** for safety-critical edge cases.
-2.  **Real-time Fusion:** Pulls live meteorological data via Satellite APIs (WeatherAPI & Open-Meteo) and fuses it with user-input soil chemistry.
-3.  **PWA Core:** Built-in Service Workers (`sw.js`) and Manifest ensure the dashboard is installable and accessible even with low network connectivity.
-4.  **Accessibility First:** Integrated **Text-To-Speech (TTS)** voice assistant and tri-language support (English, Hindi, Marathi) to bridge the digital divide.
+## 🔄 System Workflow
 
-## 🏆 Hackathon "Secret Sauce"
-For the judges looking at the technical depth:
-- **Confidence Calibration:** The system doesn't just predict; it provides a full probability breakdown of all potential candidates.
-- **Demo-Ready Scenarios:** We've implemented specific overrides for crops like **Banana** and **Chickpea** to demonstrate how the system handles high-confidence recommendations in varying moisture levels.
-- **Satellite Sync:** The app uses GPS to localize and fetch the exact environmental context of the user's farm.
+1. Sensors collect real-time data (soil moisture, temperature)
+2. ESP32 sends data to backend via WiFi
+3. Backend fetches:
+   - Weather data
+   - Market prices
+4. AI model processes all inputs
+5. System outputs:
+   👉 Best crop recommendation  
+   👉 Profit insights  
+6. Results displayed on web dashboard
 
+---
+
+## 📡 Hardware Integration
+
+### Components:
+- ESP32
+- Soil Moisture Sensor
+- DHT11 Sensor
+
+### Working:
+- Sensors → ESP32 → WiFi → Backend API → Dashboard
+
+---
 ## 📖 How to Demo
 Follow these steps for a perfect demonstration of AgriNova's capabilities:
 
@@ -65,3 +117,9 @@ Follow these steps for a perfect demonstration of AgriNova's capabilities:
 ---
 **AgriNova – Future-Proofing Agriculture, One Crop at a Time.**
 
+## 🚀 Setup Instructions
+
+### 1. Clone Repository
+```bash
+git clone https://github.com/Shivilyadav/AgriNova.git
+cd AgriNova
