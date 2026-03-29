@@ -205,7 +205,7 @@ select#lang-select option {
 /* Hero Section */
 .hero {
   min-height: 100vh;
-  padding-top: 180px;
+  padding-top: 110px;
   display: flex;
   align-items: flex-start;
   justify-content: center;
