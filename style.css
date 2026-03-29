@@ -265,11 +265,9 @@ select#lang-select option {
   justify-content: center;
 }
 
-/* Features Section */
 .features {
-  padding: 100px 0;
-  background-color: transparent;
-  backdrop-filter: blur(0px);
+  padding: 60px 0;
+  background: transparent;
 }
 
 .section-title {
@@ -504,14 +502,13 @@ select#lang-select option {
 
 /* How It Works Section */
 .how-it-works {
-  padding: 50px 0;
-  background-color: transparent;
-  backdrop-filter: blur(0px);
+  padding: 20px 0;
+  background: transparent;
 }
 
 .section-header-centered {
   text-align: center;
-  margin-bottom: 70px;
+  margin-bottom: 40px;
 }
 
 .section-header-centered h2 {
