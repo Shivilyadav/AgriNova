@@ -204,10 +204,10 @@ select#lang-select option {
 
 /* Hero Section */
 .hero {
-  min-height: 110vh;
-  padding-top: 100px;
+  min-height: 100vh;
+  padding-top: 180px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   text-align: center;
   position: relative;
