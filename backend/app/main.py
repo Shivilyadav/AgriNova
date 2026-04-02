@@ -1,6 +1,8 @@
 import os
 import random
 from pathlib import Path
+from datetime import datetime
+from collections import deque
 import requests
 from typing import Optional
 from contextlib import asynccontextmanager
@@ -39,7 +41,7 @@ class MarketIntelligenceAgent:
                     "filters[state]": state,
                     "limit": 1
                 }
-                res = requests.get(OGD_URL, params=params, timeout=4)
+                res = requests.get(OGD_URL, params=params, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
                     if data.get("records"):
@@ -54,7 +56,7 @@ class MarketIntelligenceAgent:
                             "date": rec.get("arrival_date", "Today")
                         }
             except Exception as e:
-                print(f"[OGD API] Sync failure: {e}")
+                print(f"[OGD API] Sync failure for {crop_name}: {e}")
 
         # Local Fallback
         base_price = self.crop_prices.get(crop_name.title(), 2500)
@@ -131,6 +133,7 @@ WEATHER_URL = "https://api.weatherapi.com/v1/forecast.json"
 OGD_URL = "https://api.data.gov.in/resource/9ef273e5-7f2d-4791-bdf2-17445778a39e"
 
 # --- MULTI-AGENT ORCHESTRATION LAYER (Groq Llama-3 Powered) ---
+print(f"[AgriNova] Initializing Groq Client... API Key Present: {bool(GROQ_API_KEY)}")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 class AgronomistWorker:
@@ -212,6 +215,7 @@ class AgriNovaManager:
         
         # Final Synthesis
         master_strategy = "Orchestrated science, profit & compliance report finalized."
+        print(f"[AgriNova] Orchestrating Master Strategy... AI Client Ready: {bool(client)}")
         if client:
             try:
                 system_instr = "You are a master farm strategist. Summarize the Chain of Thought into 1 high-impact 1-sentence action plan."
@@ -224,7 +228,10 @@ class AgriNovaManager:
                     max_tokens=200
                 )
                 master_strategy = response.choices[0].message.content
-            except: pass
+                print(f"[AgriNova] Master Strategy Generated: {master_strategy[:50]}...")
+            except Exception as e:
+                print(f"[AgriNova] Master Plan Generation Error: {e}")
+                pass
 
         return {
             "master_strategy": master_strategy,
@@ -269,6 +276,94 @@ class InputSchema(BaseModel):
     temp_sim: Optional[float] = None
     hum_sim: Optional[float] = None
     rain_sim: Optional[float] = None
+
+# --- IoT HARDWARE SENSOR INTEGRATION ---
+class SensorPayload(BaseModel):
+    temperature: Optional[float] = None
+    soil_moisture: Optional[float] = None
+    humidity: Optional[float] = None
+    light: Optional[float] = None
+    rain: Optional[float] = None
+    N: Optional[float] = None
+    P: Optional[float] = None
+    K: Optional[float] = None
+    ph: Optional[float] = None
+    device_id: Optional[str] = "default"
+
+# In-memory IoT data store (latest + history ring buffer)
+MAX_SENSOR_HISTORY = 100
+sensor_latest: dict = {}
+sensor_history: deque = deque(maxlen=MAX_SENSOR_HISTORY)
+
+@app.post("/api/sensor")
+def receive_sensor_data(data: SensorPayload):
+    """Receive sensor data from Arduino/ESP32/NodeMCU hardware."""
+    timestamp = datetime.now().isoformat()
+    reading = {
+        "timestamp": timestamp,
+        "device_id": data.device_id,
+        "temperature": data.temperature,
+        "soil_moisture": data.soil_moisture,
+        "humidity": data.humidity,
+        "light": data.light,
+        "rain": data.rain,
+        "N": data.N,
+        "P": data.P,
+        "K": data.K,
+        "ph": data.ph,
+    }
+    # Remove None values for cleaner storage
+    reading = {k: v for k, v in reading.items() if v is not None}
+    reading["timestamp"] = timestamp  # Always keep timestamp
+    reading["device_id"] = data.device_id or "default"
+
+    sensor_latest[reading["device_id"]] = reading
+    sensor_history.append(reading)
+
+    # Derive soil moisture percentage (typical analog: 0=wet, 1023=dry)
+    moisture_pct = None
+    if data.soil_moisture is not None:
+        moisture_pct = round(max(0, min(100, (1023 - data.soil_moisture) / 1023 * 100)), 1)
+        reading["soil_moisture_pct"] = moisture_pct
+        sensor_latest[reading["device_id"]]["soil_moisture_pct"] = moisture_pct
+
+    print(f"[IoT] Sensor data received from '{reading['device_id']}': Temp={data.temperature}, Moisture={data.soil_moisture} ({moisture_pct}%)")
+
+    return {
+        "status": "ok",
+        "message": "Sensor data ingested successfully",
+        "timestamp": timestamp,
+        "soil_moisture_pct": moisture_pct
+    }
+
+@app.get("/api/sensor/latest")
+def get_latest_sensor(device_id: str = "default"):
+    """Get the latest sensor reading for the frontend dashboard."""
+    if device_id in sensor_latest:
+        return {"status": "ok", "data": sensor_latest[device_id]}
+    # If no specific device, return first available or empty
+    if sensor_latest:
+        first_device = list(sensor_latest.values())[0]
+        return {"status": "ok", "data": first_device}
+    return {"status": "waiting", "data": None, "message": "No sensor data received yet. Connect your hardware."}
+
+@app.get("/api/sensor/history")
+def get_sensor_history(limit: int = 20):
+    """Get recent sensor reading history for charts."""
+    history = list(sensor_history)
+    return {"status": "ok", "count": len(history), "data": history[-limit:]}
+
+@app.get("/api/sensor/devices")
+def get_connected_devices():
+    """List all devices that have sent data."""
+    devices = []
+    for device_id, reading in sensor_latest.items():
+        devices.append({
+            "device_id": device_id,
+            "last_seen": reading.get("timestamp"),
+            "fields": list(reading.keys())
+        })
+    return {"status": "ok", "devices": devices}
 
 @app.post("/predict")
 def predict(data: InputSchema):
@@ -495,9 +590,9 @@ def farming_expert_chat(data: ChatRequest):
     except Exception as e:
         return {"response": f"I had a synchronization error: {str(e)}", "error": True}
 
-# Serve the beautiful frontend dashboard directly from current working directory
-frontend_dir = os.getcwd()
-app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+# Serve the beautiful frontend dashboard directly from the root directory
+base_dir = Path(__file__).resolve().parents[2]
+app.mount("/", StaticFiles(directory=str(base_dir), html=True), name="frontend")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8007)

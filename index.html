@@ -318,6 +318,102 @@
               </div>
             </div>
 
+            <!-- IoT Live Sensor Panel -->
+            <div class="dash-card iot-card" id="iot-panel">
+              <div class="security-badge-local">
+                <i class="fa-solid fa-shield-halved"></i> 
+                <span>AGRINOVA SHIELD: LOCAL NETWORK SECURE</span>
+              </div>
+              <div class="card-header">
+                <h3><i class="fa-solid fa-microchip"></i> IoT Sensor Feed</h3>
+                <span class="iot-status" id="iot-status">
+                  <span class="iot-dot disconnected" id="iot-dot"></span>
+                  <span id="iot-status-text">Waiting...</span>
+                </span>
+              </div>
+
+              <!-- Sensor Gauges Grid -->
+              <div class="iot-gauges-grid">
+                <!-- Temperature Gauge -->
+                <div class="iot-gauge" id="gauge-temp">
+                  <svg viewBox="0 0 120 120" class="gauge-svg">
+                    <circle cx="60" cy="60" r="52" class="gauge-bg"/>
+                    <circle cx="60" cy="60" r="52" class="gauge-fill gauge-fill-temp" id="gauge-arc-temp"
+                      stroke-dasharray="0 327" />
+                  </svg>
+                  <div class="gauge-center">
+                    <span class="gauge-value" id="iot-temp-val">--</span>
+                    <span class="gauge-unit">°C</span>
+                  </div>
+                  <p class="gauge-label">Temperature</p>
+                </div>
+
+                <!-- Soil Moisture Gauge -->
+                <div class="iot-gauge" id="gauge-moisture">
+                  <svg viewBox="0 0 120 120" class="gauge-svg">
+                    <circle cx="60" cy="60" r="52" class="gauge-bg"/>
+                    <circle cx="60" cy="60" r="52" class="gauge-fill gauge-fill-moisture" id="gauge-arc-moisture"
+                      stroke-dasharray="0 327" />
+                  </svg>
+                  <div class="gauge-center">
+                    <span class="gauge-value" id="iot-moisture-val">--</span>
+                    <span class="gauge-unit">%</span>
+                  </div>
+                  <p class="gauge-label">Soil Moisture</p>
+                </div>
+
+                <!-- Humidity Gauge -->
+                <div class="iot-gauge" id="gauge-humidity">
+                  <svg viewBox="0 0 120 120" class="gauge-svg">
+                    <circle cx="60" cy="60" r="52" class="gauge-bg"/>
+                    <circle cx="60" cy="60" r="52" class="gauge-fill gauge-fill-humidity" id="gauge-arc-humidity"
+                      stroke-dasharray="0 327" />
+                  </svg>
+                  <div class="gauge-center">
+                    <span class="gauge-value" id="iot-hum-val">--</span>
+                    <span class="gauge-unit">%</span>
+                  </div>
+                  <p class="gauge-label">Humidity</p>
+                </div>
+
+                <!-- Light Gauge -->
+                <div class="iot-gauge" id="gauge-light">
+                  <svg viewBox="0 0 120 120" class="gauge-svg">
+                    <circle cx="60" cy="60" r="52" class="gauge-bg"/>
+                    <circle cx="60" cy="60" r="52" class="gauge-fill gauge-fill-light" id="gauge-arc-light"
+                      stroke-dasharray="0 327" />
+                  </svg>
+                  <div class="gauge-center">
+                    <span class="gauge-value" id="iot-light-val">--</span>
+                    <span class="gauge-unit">%</span>
+                  </div>
+                  <p class="gauge-label">Light</p>
+                </div>
+              </div>
+
+              <!-- Device Info Row -->
+              <div class="iot-info-row">
+                <div class="iot-info-item">
+                  <i class="fa-solid fa-tower-broadcast"></i>
+                  <span>Device: <strong id="iot-device-id">--</strong></span>
+                </div>
+                <div class="iot-info-item">
+                  <i class="fa-solid fa-clock"></i>
+                  <span>Last: <strong id="iot-last-seen">--</strong></span>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="iot-actions">
+                <button class="btn btn-sm btn-outline" onclick="autofillFromSensor()" id="iot-autofill-btn">
+                  <i class="fa-solid fa-arrow-right-to-bracket"></i> Push to Soil Form
+                </button>
+                <button class="btn btn-sm btn-outline" onclick="fetchSensorData()">
+                  <i class="fa-solid fa-rotate"></i> Refresh
+                </button>
+              </div>
+            </div>
+
             <!-- AI Result Card (Hidden until active) -->
             <div class="dash-card prediction-card" id="result-box">
               <div class="card-header">

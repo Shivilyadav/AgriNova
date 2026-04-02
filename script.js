@@ -547,12 +547,178 @@ function switchLang(lang) {
 }
 
 
+// =============================================
+// IoT LIVE SENSOR DASHBOARD
+// Polls /api/sensor/latest every 5 seconds
+// and animates the SVG arc gauges in #iot-panel
+// =============================================
+
+let latestSensorData = null; // Cached for autofill
+
+/**
+ * Animate a circular SVG gauge arc.
+ * @param {string} arcId   - The id of the <circle> gauge-fill element
+ * @param {number} value   - Current sensor value
+ * @param {number} min     - Minimum possible value
+ * @param {number} max     - Maximum possible value
+ */
+function updateGauge(arcId, value, min, max) {
+    const arc = document.getElementById(arcId);
+    if (!arc) return;
+    const circumference = 2 * Math.PI * 52; // r=52, matches SVG
+    const pct = Math.max(0, Math.min(1, (value - min) / (max - min)));
+    const filled = pct * circumference;
+    arc.style.transition = 'stroke-dasharray 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+    arc.setAttribute('stroke-dasharray', `${filled} ${circumference - filled}`);
+}
+
+/**
+ * Fetch latest sensor reading from the backend and update all gauges + status.
+ */
+async function fetchSensorData() {
+    const statusDot  = document.getElementById('iot-dot');
+    const statusText = document.getElementById('iot-status-text');
+    const deviceIdEl = document.getElementById('iot-device-id');
+    const lastSeenEl = document.getElementById('iot-last-seen');
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/sensor/latest`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+
+        if (json.status === 'waiting' || !json.data) {
+            // No hardware connected yet
+            if (statusDot)  { statusDot.className  = 'iot-dot disconnected'; }
+            if (statusText) { statusText.innerText = 'Waiting for ESP32...'; }
+            return;
+        }
+
+        const d = json.data;
+        latestSensorData = d; // Cache for autofill
+
+        // --- Status indicator ---
+        if (statusDot)  { statusDot.className  = 'iot-dot connected'; }
+        if (statusText) { statusText.innerText = 'Live'; }
+
+        // --- Device info ---
+        if (deviceIdEl) deviceIdEl.innerText = d.device_id || '--';
+        if (lastSeenEl && d.timestamp) {
+            const t = new Date(d.timestamp);
+            lastSeenEl.innerText = t.toLocaleTimeString();
+        }
+
+        // --- Temperature (range 0–50 °C) ---
+        if (d.temperature != null) {
+            const el = document.getElementById('iot-temp-val');
+            if (el) el.innerText = d.temperature.toFixed(1);
+            updateGauge('gauge-arc-temp', d.temperature, 0, 50);
+        }
+
+        // --- Soil Moisture % ---
+        const moisture = d.soil_moisture_pct ?? (d.soil_moisture != null
+            ? Math.round(Math.max(0, Math.min(100, (1023 - d.soil_moisture) / 1023 * 100)))
+            : null);
+        if (moisture != null) {
+            const el = document.getElementById('iot-moisture-val');
+            if (el) el.innerText = moisture.toFixed(1);
+            updateGauge('gauge-arc-moisture', moisture, 0, 100);
+        }
+
+        // --- Humidity (range 0–100 %) ---
+        if (d.humidity != null) {
+            const el = document.getElementById('iot-hum-val');
+            if (el) el.innerText = d.humidity.toFixed(1);
+            updateGauge('gauge-arc-humidity', d.humidity, 0, 100);
+        }
+
+        // --- Light (range 0–100 %) ---
+        if (d.light != null) {
+            const el = document.getElementById('iot-light-val');
+            if (el) el.innerText = Math.round(d.light);
+            updateGauge('gauge-arc-light', d.light, 0, 100);
+        }
+
+        // --- Optional: flash the IOT card border briefly ---
+        const panel = document.getElementById('iot-panel');
+        if (panel) {
+            panel.style.transition = 'box-shadow 0.3s';
+            panel.style.boxShadow  = '0 0 20px rgba(132, 204, 22, 0.4)';
+            setTimeout(() => { panel.style.boxShadow = ''; }, 800);
+        }
+
+    } catch (err) {
+        console.warn('[IoT] Could not reach /api/sensor/latest:', err.message);
+        if (statusDot)  { statusDot.className  = 'iot-dot disconnected'; }
+        if (statusText) { statusText.innerText = 'Backend Offline'; }
+    }
+}
+
+/**
+ * Push the latest ESP32 reading into the Soil Analytics form inputs.
+ * Called by "Push to Soil Form" button in the IoT panel.
+ */
+function autofillFromSensor() {
+    if (!latestSensorData) {
+        Swal.fire({
+            toast: true, position: 'top-end', icon: 'warning',
+            title: 'No sensor data yet',
+            text: 'Connect your ESP32 and wait for the first reading.',
+            showConfirmButton: false, timer: 3000,
+            background: '#161b22', color: '#fff'
+        });
+        return;
+    }
+
+    const d = latestSensorData;
+
+    // Fill simulation overrides — temperature & humidity from real sensor
+    if (d.temperature != null) {
+        const el = document.getElementById('temp_sim');
+        if (el) el.value = d.temperature.toFixed(1);
+    }
+    if (d.humidity != null) {
+        const el = document.getElementById('hum_sim');
+        if (el) el.value = d.humidity.toFixed(1);
+    }
+    if (d.rain != null) {
+        const el = document.getElementById('rain_sim');
+        // Convert 0-100 rain level to rough mm estimate (0-200mm range)
+        if (el) el.value = Math.round(d.rain * 2);
+    }
+
+    // Highlight the soil form card
+    const soilCard = document.querySelector('.soil-card');
+    if (soilCard) {
+        soilCard.style.transition = 'all 0.3s';
+        soilCard.style.border     = '2px solid var(--accent-green)';
+        soilCard.style.boxShadow  = '0 0 20px rgba(132, 204, 22, 0.3)';
+        setTimeout(() => {
+            soilCard.style.border    = '';
+            soilCard.style.boxShadow = '';
+        }, 1800);
+    }
+
+    Swal.fire({
+        toast: true, position: 'top-end', icon: 'success',
+        title: 'Sensor Data Imported!',
+        text: `Temp: ${d.temperature?.toFixed(1)}°C · Humidity: ${d.humidity?.toFixed(1)}% · Device: ${d.device_id}`,
+        showConfirmButton: false, timer: 3500, timerProgressBar: true,
+        background: '#161b22', color: '#fff', iconColor: '#84cc16'
+    });
+}
+
+// =============================================
+
 document.addEventListener('DOMContentLoaded', () => {
     initGeoLocation();
     fetchTips();
     initModal();
     // initBackgroundAnim(); // Disabling dynamic background for static consistency
     setInterval(fetchWeather, 300000); // Sync every 5 mins
+
+    // IoT Sensor Live Polling (every 5 seconds)
+    fetchSensorData();                        // Immediate first fetch
+    setInterval(fetchSensorData, 5000);       // Then every 5s
 
     // Header Morph Effect
     const header = document.querySelector('header');
@@ -833,6 +999,23 @@ function handleChatKey(e) {
 
 let chatHistory = [];
 
+// Safe markdown parser wrapper - handles all versions of marked library
+function safeParse(text) {
+    if (!text) return '';
+    try {
+        if (typeof marked !== 'undefined') {
+            // marked v5+ uses marked.parse()
+            if (typeof marked.parse === 'function') return marked.parse(text);
+            // older marked versions use marked() directly
+            if (typeof marked === 'function') return marked(text);
+        }
+    } catch (e) {
+        console.warn('[Chat] Markdown parse failed, using plain text:', e);
+    }
+    // Fallback: escape HTML and convert newlines to <br>
+    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g, '<br>');
+}
+
 async function sendChatMessage() {
     const input = document.getElementById('user-msg');
     const msg = input.value.trim();
@@ -862,20 +1045,23 @@ async function sendChatMessage() {
         
         const data = await response.json();
         const indicator = document.getElementById('typing-indicator');
-        if (indicator) messagesContainer.removeChild(indicator);
-        appendChatMsg(data.response, 'ai-message', true);
+        if (indicator) indicator.remove();
+
+        const replyText = data.response || 'Agent could not generate a response.';
+        appendChatMsg(replyText, 'ai-message', true);
         
         // Add to history so AI remembers the conversation flow
         chatHistory.push({ role: "user", content: msg });
-        chatHistory.push({ role: "assistant", content: data.response });
+        chatHistory.push({ role: "assistant", content: replyText });
         
         // Keep history manageable
         if (chatHistory.length > 10) chatHistory = chatHistory.slice(chatHistory.length - 10);
         
     } catch (e) {
+        console.error('[Chat] Error:', e);
         const indicator = document.getElementById('typing-indicator');
-        if (indicator) messagesContainer.removeChild(indicator);
-        appendChatMsg("Maaf kijiye, main connect nahi kar paa raha hoon. API key check karein.", 'ai-message');
+        if (indicator) indicator.remove();
+        appendChatMsg("Maaf kijiye, main connect nahi kar paa raha hoon. Backend check karein.", 'ai-message');
     }
 }
 
@@ -883,6 +1069,9 @@ function appendChatMsg(text, className, isStreaming = false) {
     const messagesContainer = document.getElementById('chat-messages');
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${className}`;
+    
+    // Ensure text is always a string
+    const safeText = (text && typeof text === 'string') ? text : String(text || '');
     
     // Add text container for markdown injection
     const textSpan = document.createElement('div');
@@ -895,39 +1084,37 @@ function appendChatMsg(text, className, isStreaming = false) {
         btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
         btn.className = 'chat-voice-btn';
         btn.title = 'Speak Message Aloud';
-        btn.onclick = () => speakChatMsg(text, btn);
+        btn.onclick = () => speakChatMsg(safeText, btn);
         msgDiv.appendChild(btn);
     }
     
     messagesContainer.appendChild(msgDiv);
     
     // ChatGPT Style Streaming and Markdown Effect
-    if (isStreaming && className === 'ai-message') {
+    if (isStreaming && className === 'ai-message' && safeText.length > 0) {
         let idx = 0;
         
         function typeWriter() {
-            if(idx < text.length) {
-                // Type chunks of 2-5 characters for smooth real-time feel
+            if(idx < safeText.length) {
                 const chunkSize = Math.floor(Math.random() * 4) + 2;
                 idx += chunkSize;
-                if(idx > text.length) idx = text.length;
+                if(idx > safeText.length) idx = safeText.length;
                 
-                const currentText = text.substring(0, idx);
-                // Parse markdown live while typing
-                textSpan.innerHTML = marked.parse(currentText) + '<span class="cursor">▋</span>';
+                const currentText = safeText.substring(0, idx);
+                textSpan.innerHTML = safeParse(currentText) + '<span class="cursor">▋</span>';
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 setTimeout(typeWriter, 12);
             } else {
-                textSpan.innerHTML = marked.parse(text); // Final markdown render
+                textSpan.innerHTML = safeParse(safeText);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
         }
         typeWriter();
     } else {
         if (className === 'ai-message') {
-            textSpan.innerHTML = marked.parse(text);
+            textSpan.innerHTML = safeParse(safeText);
         } else {
-            textSpan.innerText = text;
+            textSpan.innerText = safeText;
         }
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
