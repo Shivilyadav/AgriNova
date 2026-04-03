@@ -638,6 +638,22 @@ async function fetchSensorData() {
             updateGauge('gauge-arc-light', d.light, 0, 100);
         }
 
+        // ==========================================
+        // AUTOMATICALLY FILL SIMULATION OVERRIDES
+        // ==========================================
+        if (d.temperature != null) {
+            const el = document.getElementById('temp_sim');
+            if (el) el.value = d.temperature.toFixed(1);
+        }
+        if (d.humidity != null) {
+            const el = document.getElementById('hum_sim');
+            if (el) el.value = d.humidity.toFixed(1);
+        }
+        if (d.rain != null) {
+            const el = document.getElementById('rain_sim');
+            if (el) el.value = Math.round(d.rain * 2);
+        }
+
         // --- Optional: flash the IOT card border briefly ---
         const panel = document.getElementById('iot-panel');
         if (panel) {
@@ -653,11 +669,7 @@ async function fetchSensorData() {
     }
 }
 
-/**
- * Push the latest ESP32 reading into the Soil Analytics form inputs.
- * Called by "Push to Soil Form" button in the IoT panel.
- */
-function autofillFromSensor() {
+async function autofillFromSensor() {
     if (!latestSensorData) {
         Swal.fire({
             toast: true, position: 'top-end', icon: 'warning',
@@ -671,40 +683,43 @@ function autofillFromSensor() {
 
     const d = latestSensorData;
 
-    // Fill simulation overrides — temperature & humidity from real sensor
-    if (d.temperature != null) {
-        const el = document.getElementById('temp_sim');
-        if (el) el.value = d.temperature.toFixed(1);
-    }
-    if (d.humidity != null) {
-        const el = document.getElementById('hum_sim');
-        if (el) el.value = d.humidity.toFixed(1);
-    }
-    if (d.rain != null) {
-        const el = document.getElementById('rain_sim');
-        // Convert 0-100 rain level to rough mm estimate (0-200mm range)
-        if (el) el.value = Math.round(d.rain * 2);
-    }
+    try {
+        // Backend API ko hit karke CSV / Excel me save karna
+        const req = await fetch(`${API_BASE_URL}/api/push-to-soil-form?sensor_id=${d.device_id || 'default'}`, { method: 'POST' });
+        if(!req.ok) throw new Error("DB Save Failed");
+        const resData = await req.json();
+        
+        console.log("Saved directly to backend CSV:", resData);
 
-    // Highlight the soil form card
-    const soilCard = document.querySelector('.soil-card');
-    if (soilCard) {
-        soilCard.style.transition = 'all 0.3s';
-        soilCard.style.border     = '2px solid var(--accent-green)';
-        soilCard.style.boxShadow  = '0 0 20px rgba(132, 204, 22, 0.3)';
-        setTimeout(() => {
-            soilCard.style.border    = '';
-            soilCard.style.boxShadow = '';
-        }, 1800);
-    }
+        // Highlight the soil form card to show it worked
+        const soilCard = document.querySelector('.soil-card');
+        if (soilCard) {
+            soilCard.style.transition = 'all 0.3s';
+            soilCard.style.border     = '2px solid var(--accent-green)';
+            soilCard.style.boxShadow  = '0 0 20px rgba(132, 204, 22, 0.3)';
+            setTimeout(() => {
+                soilCard.style.border    = '';
+                soilCard.style.boxShadow = '';
+            }, 1800);
+        }
 
-    Swal.fire({
-        toast: true, position: 'top-end', icon: 'success',
-        title: 'Sensor Data Imported!',
-        text: `Temp: ${d.temperature?.toFixed(1)}°C · Humidity: ${d.humidity?.toFixed(1)}% · Device: ${d.device_id}`,
-        showConfirmButton: false, timer: 3500, timerProgressBar: true,
-        background: '#161b22', color: '#fff', iconColor: '#84cc16'
-    });
+        Swal.fire({
+            toast: true, position: 'top-end', icon: 'success',
+            title: 'Saved to Soil Database!',
+            text: `Data Secured in backend/data. Temp: ${d.temperature?.toFixed(1)}°C`,
+            showConfirmButton: false, timer: 3500, timerProgressBar: true,
+            background: '#161b22', color: '#fff', iconColor: '#84cc16'
+        });
+
+    } catch (e) {
+        Swal.fire({
+            toast: true, position: 'top-end', icon: 'error',
+            title: 'Save Error',
+            text: e.message,
+            showConfirmButton: false, timer: 3000,
+            background: '#161b22', color: '#ff4444'
+        });
+    }
 }
 
 // =============================================

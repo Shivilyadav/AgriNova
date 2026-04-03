@@ -365,6 +365,42 @@ def get_connected_devices():
         })
     return {"status": "ok", "devices": devices}
 
+@app.post("/api/push-to-soil-form")
+def push_to_soil_form(sensor_id: str = "default"):
+    """Push current live sensor data to the Soil Form database (CSV)"""
+    # 1. Fetch live data from memory
+    if not sensor_latest:
+        raise HTTPException(status_code=404, detail="No sensor data currently available.")
+        
+    current_data = sensor_latest.get(sensor_id)
+    if not current_data:
+        # Fallback to the first available device if the requested one isn't found
+        current_data = list(sensor_latest.values())[0]
+
+    # 2. Save data to CSV (Excel format)
+    try:
+        # Save securely in the backend/data directory
+        save_path = Path(__file__).resolve().parents[1] / "data" / "soil_form_saved.csv"
+        save_path.parent.mkdir(parents=True, exist_ok=True) # Ensure data folder exists
+        
+        df = pd.DataFrame([current_data])
+        
+        if save_path.exists():
+            df.to_csv(save_path, mode='a', header=False, index=False)
+        else:
+            df.to_csv(save_path, mode='w', header=True, index=False)
+            
+        print(f"[IoT] Data from {current_data.get('device_id')} successfully pushed to Soil Form DB: {save_path}")
+        
+        return {
+            "status": "success", 
+            "message": "Data pushed to Soil Management Form successfully!",
+            "saved_data": current_data
+        }
+    except Exception as e:
+        print(f"[IoT] Auto-Save Error: {e}")
+        raise HTTPException(status_code=500, detail="Database save failed.")
+
 @app.post("/predict")
 def predict(data: InputSchema):
     if not is_trained:
@@ -372,29 +408,44 @@ def predict(data: InputSchema):
 
     # 1. Localize inputs from body
     N, P, K, ph = data.N, data.P, data.K, data.ph
-    temperature, humidity, rainfall = 25.0, 70.0, 0.0 # Defaults
+    temperature, humidity, rainfall = 25.0, 70.0, 0.0 # Standard Defaults
     data_source = "Default"
 
-    # 2. Get Live Weather & Apply Simulation Overrides
-    try:
-        # Construct location query for WeatherAPI (supports "lat,lon")
-        location_q = data.q
-        if data.lat is not None and data.lon is not None:
-            location_q = f"{data.lat},{data.lon}"
+    # 1.5 CHECK IoT REAL DATA FIRST (AgriNova Physical Sensors)
+    iot_connected = False
+    if sensor_latest:
+        # Get data from the first active node
+        live_node = list(sensor_latest.values())[0]
+        
+        # Pull live values directly from hardware if valid
+        if live_node.get("temperature") and live_node.get("humidity"):
+            temperature = float(live_node["temperature"])
+            humidity = float(live_node["humidity"])
+            data_source = "🟢 Live IoT Hardware (ESP32)"
+            iot_connected = True
+            print(f"[PREDICT] Using Live Physical Sensor Data: T={temperature}C, H={humidity}%")
 
-        weather_resp = requests.get(f"{WEATHER_URL}?key={WEATHER_API_KEY}&q={location_q}&days=1", timeout=5)
-        if weather_resp.status_code == 200:
-            forecast = weather_resp.json()
-            temperature = float(forecast['current']['temp_c'])
-            humidity = float(forecast['current']['humidity'])
-            rainfall = float(forecast.get('forecast', {}).get('forecastday', [{}])[0].get('day', {}).get('totalprecip_mm', 0.0))
-            data_source = f"Live WeatherAPI ({forecast['location']['name']})"
-        else:
-            data_source = "Fallback Settings (Mumbai Sync)"
-    except Exception:
-        data_source = "Emergency Defaults"
+    # 2. Get Live Weather if IoT is disconnected
+    if not iot_connected:
+        try:
+            # Construct location query for WeatherAPI
+            location_q = data.q
+            if data.lat is not None and data.lon is not None:
+                location_q = f"{data.lat},{data.lon}"
+    
+            weather_resp = requests.get(f"{WEATHER_URL}?key={WEATHER_API_KEY}&q={location_q}&days=1", timeout=5)
+            if weather_resp.status_code == 200:
+                forecast = weather_resp.json()
+                temperature = float(forecast['current']['temp_c'])
+                humidity = float(forecast['current']['humidity'])
+                rainfall = float(forecast.get('forecast', {}).get('forecastday', [{}])[0].get('day', {}).get('totalprecip_mm', 0.0))
+                data_source = f"Live WeatherAPI ({forecast['location']['name']})"
+            else:
+                data_source = "Fallback Settings (Mumbai Sync)"
+        except Exception:
+            data_source = "Emergency Defaults"
 
-    # CRITICAL: Overwrite with Simulation Values if provided by user
+    # CRITICAL: Overwrite with Simulation Values if provided by user manually
     ts, hs, rs = data.temp_sim, data.hum_sim, data.rain_sim
     
     if ts is not None:
@@ -433,7 +484,7 @@ def predict(data: InputSchema):
             "environmental_data": {"temperature": t, "humidity": h, "rainfall": r},
             "market_intelligence": market_agent.get_market_analysis("Banana"),
             "market_pick": market_pick,
-            "source": "Expert Model (Banana Force)"
+            "source": data_source
         }
 
     # CASE: Chickpea (Dry conditions, lower N)
@@ -450,7 +501,7 @@ def predict(data: InputSchema):
             "environmental_data": {"temperature": t, "humidity": h, "rainfall": r},
             "market_intelligence": market_agent.get_market_analysis("Chickpea"),
             "market_pick": market_pick,
-            "source": "Expert Model (Chickpea Force)"
+            "source": data_source
         }
         
     # CASE: Rice Simulation (Standard Balanced Humidity)
@@ -467,7 +518,7 @@ def predict(data: InputSchema):
             "environmental_data": {"temperature": t, "humidity": h, "rainfall": r},
             "market_intelligence": market_agent.get_market_analysis("Rice"),
             "market_pick": market_pick,
-            "source": "Expert Model (High Bias)"
+            "source": data_source
         }
 
     # 4. Predict with Standard Scaling and getting Probabilities
@@ -594,5 +645,26 @@ def farming_expert_chat(data: ChatRequest):
 base_dir = Path(__file__).resolve().parents[2]
 app.mount("/", StaticFiles(directory=str(base_dir), html=True), name="frontend")
 
+import socket
+import threading
+import webbrowser
+import time
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8007)
+    def open_browser():
+        time.sleep(2)  # Wait for the server to start
+        webbrowser.open("http://localhost:8007")
+        
+    threading.Thread(target=open_browser, daemon=True).start()
+    
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+    
+    print("="*60)
+    print("🚀 AGRINOVA SERVER IS STARTING...")
+    print("="*60)
+    print("👉 For your BROWSER (Click this): http://localhost:8007")
+    print(f"👉 For your ESP32 Hardware (Use this IP): {local_ip}")
+    print("="*60)
+    
+    uvicorn.run(app, host="0.0.0.0", port=8007)

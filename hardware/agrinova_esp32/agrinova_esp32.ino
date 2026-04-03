@@ -51,7 +51,8 @@ const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";   // <- apna WiFi password daa
 //   1. Run 'ipconfig' in Windows CMD to find your laptop's IPv4 address
 //   2. Replace 192.168.1.100 with your laptop's actual IP
 //   3. Port MUST be 8007 (AgriNova runs on 8007)
-const char* AGRINOVA_URL = "http://10.33.139.117:8007/api/sensor";
+// URL ko apne Hotspot IP se badlein (e.g., 192.168.137.1)
+const char* AGRINOVA_URL = "http://192.168.137.1:8007/api/sensor";
 
 // Option B: Tunnel URL (for remote access via serveo/ngrok)
 //   Uncomment the line below and paste your tunnel URL (from tunnel_url.txt)
