@@ -1,5 +1,5 @@
 // AgriNova Pro Frontend Logic - Mission Critical Farming Intelligence
-const API_BASE_URL = "http://127.0.0.1:8007";
+const API_BASE_URL = window.location.origin;
 
 let currentWeatherData = { temp: 25, humidity: 80, rain: 0 };
 let userCoords = { lat: null, lon: null };
@@ -556,20 +556,47 @@ function switchLang(lang) {
 let latestSensorData = null; // Cached for autofill
 
 /**
- * Animate a circular SVG gauge arc.
- * @param {string} arcId   - The id of the <circle> gauge-fill element
- * @param {number} value   - Current sensor value
- * @param {number} min     - Minimum possible value
- * @param {number} max     - Maximum possible value
+ * Animate a circular SVG gauge arc and its marker dot.
  */
 function updateGauge(arcId, value, min, max) {
     const arc = document.getElementById(arcId);
     if (!arc) return;
-    const circumference = 2 * Math.PI * 52; // r=52, matches SVG
+    
+    const circumference = 2 * Math.PI * 50; 
     const pct = Math.max(0, Math.min(1, (value - min) / (max - min)));
     const filled = pct * circumference;
-    arc.style.transition = 'stroke-dasharray 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+    
+    arc.style.transition = 'stroke-dasharray 1.2s cubic-bezier(0.23, 1, 0.32, 1)';
     arc.setAttribute('stroke-dasharray', `${filled} ${circumference - filled}`);
+    
+    // Rotate the marker dot around the 130x130 SVG center (65, 65)
+    const dotId = arcId.replace('arc', 'dot');
+    const dot = document.getElementById(dotId);
+    if (dot) {
+        const degrees = pct * 360;
+        dot.style.transform = `rotate(${degrees}deg)`;
+    }
+}
+
+/**
+ * Animate numbers for high-fidelity feel.
+ */
+function animateValue(id, start, end, duration, decimals = 1) {
+    const obj = document.getElementById(id);
+    if (!obj) return;
+    if (isNaN(end)) return;
+    
+    let startTimestamp = null;
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        const current = progress * (end - start) + start;
+        obj.innerText = current.toFixed(decimals);
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        }
+    };
+    window.requestAnimationFrame(step);
 }
 
 /**
@@ -587,18 +614,22 @@ async function fetchSensorData() {
         const json = await res.json();
 
         if (json.status === 'waiting' || !json.data) {
-            // No hardware connected yet
-            if (statusDot)  { statusDot.className  = 'iot-dot disconnected'; }
+            if (statusDot)  { statusDot.className  = 'iot-dot-indicator disconnected'; }
             if (statusText) { statusText.innerText = 'Waiting for ESP32...'; }
             return;
         }
 
         const d = json.data;
-        latestSensorData = d; // Cache for autofill
+        const currentTemp = parseFloat(document.getElementById('iot-temp-val')?.innerText) || 0;
+        const currentMoist = parseFloat(document.getElementById('iot-moisture-val')?.innerText) || 0;
+        const currentHum = parseFloat(document.getElementById('iot-hum-val')?.innerText) || 0;
+        const currentLight = parseFloat(document.getElementById('iot-light-val')?.innerText) || 0;
+
+        latestSensorData = d; 
 
         // --- Status indicator ---
-        if (statusDot)  { statusDot.className  = 'iot-dot connected'; }
-        if (statusText) { statusText.innerText = 'Live'; }
+        if (statusDot)  { statusDot.className  = 'iot-dot-indicator connected'; }
+        if (statusText) { statusText.innerText = 'Live Feed Active'; }
 
         // --- Device info ---
         if (deviceIdEl) deviceIdEl.innerText = d.device_id || '--';
@@ -607,40 +638,34 @@ async function fetchSensorData() {
             lastSeenEl.innerText = t.toLocaleTimeString();
         }
 
-        // --- Temperature (range 0–50 °C) ---
+        // --- Temperature ---
         if (d.temperature != null) {
-            const el = document.getElementById('iot-temp-val');
-            if (el) el.innerText = d.temperature.toFixed(1);
+            animateValue('iot-temp-val', currentTemp, d.temperature, 1000);
             updateGauge('gauge-arc-temp', d.temperature, 0, 50);
         }
 
-        // --- Soil Moisture % ---
+        // --- Soil Moisture ---
         const moisture = d.soil_moisture_pct ?? (d.soil_moisture != null
             ? Math.round(Math.max(0, Math.min(100, (1023 - d.soil_moisture) / 1023 * 100)))
             : null);
         if (moisture != null) {
-            const el = document.getElementById('iot-moisture-val');
-            if (el) el.innerText = moisture.toFixed(1);
+            animateValue('iot-moisture-val', currentMoist, moisture, 1000);
             updateGauge('gauge-arc-moisture', moisture, 0, 100);
         }
 
-        // --- Humidity (range 0–100 %) ---
+        // --- Humidity ---
         if (d.humidity != null) {
-            const el = document.getElementById('iot-hum-val');
-            if (el) el.innerText = d.humidity.toFixed(1);
+            animateValue('iot-hum-val', currentHum, d.humidity, 1000);
             updateGauge('gauge-arc-humidity', d.humidity, 0, 100);
         }
 
-        // --- Light (range 0–100 %) ---
+        // --- Light ---
         if (d.light != null) {
-            const el = document.getElementById('iot-light-val');
-            if (el) el.innerText = Math.round(d.light);
+            animateValue('iot-light-val', currentLight, d.light, 1000, 0); // 0 decimals
             updateGauge('gauge-arc-light', d.light, 0, 100);
         }
 
-        // ==========================================
-        // AUTOMATICALLY FILL SIMULATION OVERRIDES
-        // ==========================================
+        // --- Sim Overrides Sync ---
         if (d.temperature != null) {
             const el = document.getElementById('temp_sim');
             if (el) el.value = d.temperature.toFixed(1);
@@ -649,23 +674,17 @@ async function fetchSensorData() {
             const el = document.getElementById('hum_sim');
             if (el) el.value = d.humidity.toFixed(1);
         }
-        if (d.rain != null) {
-            const el = document.getElementById('rain_sim');
-            if (el) el.value = Math.round(d.rain * 2);
-        }
 
-        // --- Optional: flash the IOT card border briefly ---
+        // --- Flash Card ---
         const panel = document.getElementById('iot-panel');
         if (panel) {
-            panel.style.transition = 'box-shadow 0.3s';
-            panel.style.boxShadow  = '0 0 20px rgba(132, 204, 22, 0.4)';
-            setTimeout(() => { panel.style.boxShadow = ''; }, 800);
+            panel.style.borderColor = 'rgba(132, 204, 22, 0.4)';
+            setTimeout(() => { panel.style.borderColor = ''; }, 1000);
         }
 
     } catch (err) {
-        console.warn('[IoT] Could not reach /api/sensor/latest:', err.message);
-        if (statusDot)  { statusDot.className  = 'iot-dot disconnected'; }
-        if (statusText) { statusText.innerText = 'Backend Offline'; }
+        if (statusDot)  { statusDot.className  = 'iot-dot-indicator disconnected'; }
+        if (statusText) { statusText.innerText = 'Sync Signal Lost'; }
     }
 }
 
